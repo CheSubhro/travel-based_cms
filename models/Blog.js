@@ -2,113 +2,95 @@
 import mongoose from "mongoose";
 
 const blogSchema = new mongoose.Schema(
-    {
-        title: {
+  {
+    title: {
+      type: String,
+      required: [true, "Blog title is required"],
+      trim: true,
+      maxlength: 200,
+    },
+
+    slug: {
+      type: String,
+      required: [true, "Blog slug is required"],
+      unique: true,
+      lowercase: true,
+      trim: true,
+    },
+
+    excerpt: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+
+    content: {
+      type: String,
+      required: [true, "Blog content is required"],
+    },
+
+    featuredImage: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Media",
+    },
+
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Category",
+    },
+
+    tags: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tag",
+      },
+    ],
+
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      required: true,
+    },
+
+    status: {
+      type: String,
+      enum: ["draft", "published", "archived"],
+      default: "draft",
+    },
+
+    featured: {
+      type: Boolean,
+      default: false,
+    },
+
+    publishedAt: {
+      type: Date,
+    },
+
+    seo: {
+      metaTitle: {
         type: String,
-        required: [true, "Blog title is required"],
         trim: true,
-        maxlength: 200,
-        },
+        maxlength: 160,
+      },
 
-        slug: {
-        type: String,
-        required: [true, "Blog slug is required"],
-        unique: true,
-        lowercase: true,
-        trim: true,
-        },
-
-        excerpt: {
+      metaDescription: {
         type: String,
         trim: true,
-        maxlength: 500,
-        },
+        maxlength: 320,
+      },
 
-        content: {
-        type: String,
-        required: [true, "Blog content is required"],
-        },
-
-        featuredImage: {
-        url: {
-            type: String,
-        },
-
-        publicId: {
-            type: String,
-        },
-
-        alt: {
-            type: String,
-            trim: true,
-        },
-
-        width: {
-            type: Number,
-        },
-
-        height: {
-            type: Number,
-        },
-        },
-
-        category: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Category",
-        },
-
-        tags: [
+      keywords: [
         {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "Tag",
+          type: String,
+          trim: true,
         },
-        ],
-
-        author: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-        },
-
-        status: {
-            type: String,
-            enum: ["draft", "published", "archived"],
-            default: "draft",
-        },
-
-        featured: {
-            type: Boolean,
-            default: false,
-        },
-
-        publishedAt: {
-            type: Date,
-        },
-
-        seo: {
-        metaTitle: {
-            type: String,
-            trim: true,
-            maxlength: 160,
-        },
-
-        metaDescription: {
-            type: String,
-            trim: true,
-            maxlength: 320,
-        },
-
-        keywords: [
-            {
-            type: String,
-            trim: true,
-            },
-        ],
-        },
+      ],
     },
-    {
-        timestamps: true,
-    },
+  },
+  {
+    timestamps: true,
+  },
 );
 
 const Blog = mongoose.models.Blog || mongoose.model("Blog", blogSchema);

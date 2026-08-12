@@ -51,39 +51,13 @@ const destinationSchema = new mongoose.Schema(
         trim: true,
       },
     },
-
     images: [
       {
-        url: {
-          type: String,
-          required: true,
-        },
-
-        publicId: {
-          type: String,
-          required: true,
-        },
-
-        alt: {
-          type: String,
-          trim: true,
-        },
-
-        width: {
-          type: Number,
-        },
-
-        height: {
-          type: Number,
-        },
-
-        caption: {
-          type: String,
-          trim: true,
-        },
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Media",
       },
     ],
-
+    
     featured: {
       type: Boolean,
       default: false,
