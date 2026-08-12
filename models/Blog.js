@@ -30,31 +30,31 @@ const blogSchema = new mongoose.Schema(
         },
 
         featuredImage: {
-            url: {
-                type: String,
-            },
+        url: {
+            type: String,
+        },
 
-            publicId: {
-                type: String,
-            },
+        publicId: {
+            type: String,
+        },
 
-            alt: {
-                type: String,
-                trim: true,
-            },
+        alt: {
+            type: String,
+            trim: true,
+        },
 
-            width: {
-                type: Number,
-            },
+        width: {
+            type: Number,
+        },
 
-            height: {
-                type: Number,
-            },
+        height: {
+            type: Number,
+        },
         },
 
         category: {
-            type: String,
-            trim: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Category",
         },
 
         tags: [
@@ -66,9 +66,9 @@ const blogSchema = new mongoose.Schema(
         ],
 
         author: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
         },
 
         status: {
