@@ -53,37 +53,36 @@ const blogSchema = new mongoose.Schema(
         },
 
         category: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Category",
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Category",
         },
 
         tags: [
         {
-            type: String,
-            trim: true,
-            lowercase: true,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Tag",
         },
         ],
 
         author: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        required: true,
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "User",
+            required: true,
         },
 
         status: {
-        type: String,
-        enum: ["draft", "published", "archived"],
-        default: "draft",
+            type: String,
+            enum: ["draft", "published", "archived"],
+            default: "draft",
         },
 
         featured: {
-        type: Boolean,
-        default: false,
+            type: Boolean,
+            default: false,
         },
 
         publishedAt: {
-        type: Date,
+            type: Date,
         },
 
         seo: {
