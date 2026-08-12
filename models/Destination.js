@@ -59,7 +59,25 @@ const destinationSchema = new mongoose.Schema(
           required: true,
         },
 
+        publicId: {
+          type: String,
+          required: true,
+        },
+
         alt: {
+          type: String,
+          trim: true,
+        },
+
+        width: {
+          type: Number,
+        },
+
+        height: {
+          type: Number,
+        },
+
+        caption: {
           type: String,
           trim: true,
         },
