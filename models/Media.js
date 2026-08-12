@@ -82,6 +82,9 @@ const mediaSchema = new mongoose.Schema(
     },
 );
 
+// Indexes
+mediaSchema.index({ uploadedBy: 1 });
+
 const Media = mongoose.models.Media || mongoose.model("Media", mediaSchema);
 
 export default Media;

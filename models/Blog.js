@@ -102,6 +102,14 @@ const blogSchema = new mongoose.Schema(
   },
 );
 
+// Indexes
+blogSchema.index({ status: 1 });
+blogSchema.index({ category: 1 });
+blogSchema.index({ author: 1 });
+blogSchema.index({ publishedAt: -1 });
+blogSchema.index({ featured: 1 });
+
 const Blog = mongoose.models.Blog || mongoose.model("Blog", blogSchema);
 
 export default Blog;
+

@@ -93,8 +93,13 @@ const destinationSchema = new mongoose.Schema(
   },
 );
 
+// Indexes
+destinationSchema.index({ status: 1 });
+destinationSchema.index({ featured: 1 });
+
 const Destination =
   mongoose.models.Destination ||
   mongoose.model("Destination", destinationSchema);
 
 export default Destination;
+
