@@ -1,20 +1,13 @@
 import connectDB from "@/lib/mongodb";
+import { successResponse } from "@/lib/apiResponse";
+import { handleApiError } from "@/lib/errorHandler";
 
 export async function GET() {
     try {
         await connectDB();
 
-        return Response.json({
-        success: true,
-        message: "MongoDB connected successfully",
-        });
+        return successResponse(null, "Database connected");
     } catch (error) {
-        return Response.json(
-        {
-            success: false,
-            message: "MongoDB connection failed",
-        },
-        { status: 500 },
-        );
+        return handleApiError(error);
     }
 }
