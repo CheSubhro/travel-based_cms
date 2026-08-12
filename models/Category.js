@@ -2,51 +2,56 @@
 import mongoose from "mongoose";
 
 const categorySchema = new mongoose.Schema(
-    {
-        name: {
-            type: String,
-            required: [true, "Category name is required"],
-            trim: true,
-            maxlength: 100,
-        },
-
-        slug: {
-            type: String,
-            required: [true, "Category slug is required"],
-            unique: true,
-            lowercase: true,
-            trim: true,
-        },
-
-        description: {
-            type: String,
-            trim: true,
-            maxlength: 500,
-        },
-
-        image: {
-            url: {
-                type: String,
-            },
-
-            publicId: {
-                type: String,
-            },
-
-            alt: {
-                type: String,
-                trim: true,
-            },
-        },
-
-        isActive: {
-            type: Boolean,
-            default: true,
-        },
+  {
+    name: {
+      type: String,
+      required: [true, "Category name is required"],
+      trim: true,
+      minlength: [2, "Category name must be at least 2 characters"],
+      maxlength: [100, "Category name cannot exceed 100 characters"],
     },
-    {
-        timestamps: true,
+
+    slug: {
+      type: String,
+      required: [true, "Category slug is required"],
+      unique: true,
+      lowercase: true,
+      trim: true,
+      match: [
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        "Slug can only contain lowercase letters, numbers and hyphens",
+      ],
     },
+
+    description: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+
+    image: {
+      url: {
+        type: String,
+      },
+
+      publicId: {
+        type: String,
+      },
+
+      alt: {
+        type: String,
+        trim: true,
+      },
+    },
+
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+  },
+  {
+    timestamps: true,
+  },
 );
 
 const Category =

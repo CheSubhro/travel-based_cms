@@ -7,7 +7,8 @@ const destinationSchema = new mongoose.Schema(
       type: String,
       required: [true, "Destination title is required"],
       trim: true,
-      maxlength: 150,
+      minlength: [3, "Title must be at least 3 characters"],
+      maxlength: [150, "Title cannot exceed 150 characters"],
     },
 
     slug: {
@@ -16,18 +17,24 @@ const destinationSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      match: [
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        "Slug can only contain lowercase letters, numbers and hyphens",
+      ],
     },
 
     shortDescription: {
       type: String,
       required: [true, "Short description is required"],
       trim: true,
-      maxlength: 300,
+      minlength: [10, "Short description must be at least 10 characters"],
+      maxlength: [300, "Short description cannot exceed 300 characters"],
     },
 
     description: {
       type: String,
       required: [true, "Description is required"],
+      minlength: [20, "Description must be at least 20 characters"],
     },
 
     location: {
@@ -57,7 +64,7 @@ const destinationSchema = new mongoose.Schema(
         ref: "Media",
       },
     ],
-    
+
     featured: {
       type: Boolean,
       default: false,

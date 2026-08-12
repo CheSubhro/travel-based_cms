@@ -7,7 +7,8 @@ const blogSchema = new mongoose.Schema(
       type: String,
       required: [true, "Blog title is required"],
       trim: true,
-      maxlength: 200,
+      minlength: [5, "Title must be at least 5 characters"],
+      maxlength: [200, "Title cannot exceed 200 characters"],
     },
 
     slug: {
@@ -16,17 +17,22 @@ const blogSchema = new mongoose.Schema(
       unique: true,
       lowercase: true,
       trim: true,
+      match: [
+        /^[a-z0-9]+(?:-[a-z0-9]+)*$/,
+        "Slug can only contain lowercase letters, numbers and hyphens",
+      ],
     },
 
     excerpt: {
       type: String,
       trim: true,
-      maxlength: 500,
+      maxlength: [500, "Excerpt cannot exceed 500 characters"],
     },
 
     content: {
       type: String,
       required: [true, "Blog content is required"],
+      minlength: [20, "Content must be at least 20 characters"],
     },
 
     featuredImage: {
@@ -54,7 +60,10 @@ const blogSchema = new mongoose.Schema(
 
     status: {
       type: String,
-      enum: ["draft", "published", "archived"],
+      enum: {
+        values: ["draft", "published", "archived"],
+        message: "Invalid blog status",
+      },
       default: "draft",
     },
 

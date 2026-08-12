@@ -18,7 +18,10 @@ const mediaSchema = new mongoose.Schema(
 
         resourceType: {
             type: String,
-            enum: ["image", "video", "raw"],
+            enum: {
+                values: ["image", "video", "raw"],
+                message: "Invalid media resource type",
+            },
             default: "image",
         },
 
@@ -29,14 +32,17 @@ const mediaSchema = new mongoose.Schema(
 
         width: {
             type: Number,
+            min: [1, "Width must be greater than 0"],
         },
 
         height: {
             type: Number,
+            min: [1, "Height must be greater than 0"],
         },
 
         bytes: {
             type: Number,
+            min: [1, "File size must be greater than 0"],
         },
 
         originalName: {
@@ -60,11 +66,10 @@ const mediaSchema = new mongoose.Schema(
             type: String,
             trim: true,
         },
-
         uploadedBy: {
             type: mongoose.Schema.Types.ObjectId,
             ref: "User",
-            required: true,
+            required: [true, "Uploader is required"],
         },
 
         isActive: {
