@@ -1,9 +1,11 @@
-export const metadata = {
-  title: "Travel CMS",
-  description: "Travel Content Management System",
-};
 
 import "./globals.css";
+import siteConfig from "@/config/site";
+
+export const metadata = {
+  title: siteConfig.name,
+  description: siteConfig.description,
+};
 
 export default function RootLayout({ children }) {
   return (
