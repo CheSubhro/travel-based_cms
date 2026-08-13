@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 
 import connectDB from "@/lib/mongodb";
 
 import Category from "@/models/Category";
-import User from "@/models/User";
+import Media from "@/models/Media";
 
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
@@ -33,6 +34,40 @@ export async function POST(request) {
 
         const { name, slug, description, image, isActive } = body;
 
+        // Validate category image
+        if (image !== undefined) {
+            if (image !== null && !mongoose.Types.ObjectId.isValid(image)) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Invalid category image ID",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+
+            if (image) {
+                const mediaExists = await Media.exists({
+                    _id: image,
+                    isActive: true,
+                });
+
+                if (!mediaExists) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            message: "Category image not found",
+                        },
+                        {
+                            status: 404,
+                        },
+                    );
+                }
+            }
+        }
+
         const category = await Category.create({
             name,
             slug,
@@ -41,11 +76,15 @@ export async function POST(request) {
             isActive,
         });
 
+        const populatedCategory = await Category.findById(category._id)
+            .populate("image")
+            .lean();
+
         return NextResponse.json(
             {
                 success: true,
                 message: "Category created successfully",
-                data: category,
+                data: populatedCategory,
             },
             {
                 status: 201,
@@ -115,7 +154,10 @@ export async function GET() {
             );
         }
 
-        const categories = await Category.find().sort({ createdAt: -1 }).lean();
+        const categories = await Category.find()
+            .populate("image")
+            .sort({ createdAt: -1 })
+            .lean();
 
         return NextResponse.json({
             success: true,

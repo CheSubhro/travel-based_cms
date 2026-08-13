@@ -4,6 +4,7 @@ import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 
 import Category from "@/models/Category";
+import Media from "@/models/Media";
 
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
@@ -43,7 +44,7 @@ export async function GET(request, { params }) {
             );
         }
 
-        const category = await Category.findById(id).lean();
+        const category = await Category.findById(id).populate("image").lean();
 
         if (!category) {
             return NextResponse.json(
@@ -112,6 +113,42 @@ export async function PATCH(request, { params }) {
 
         const body = await request.json();
 
+        const { image } = body;
+
+        // Validate category image
+        if (image !== undefined) {
+            if (image !== null && !mongoose.Types.ObjectId.isValid(image)) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Invalid category image ID",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+
+            if (image) {
+                const mediaExists = await Media.exists({
+                    _id: image,
+                    isActive: true,
+                });
+
+                if (!mediaExists) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            message: "Category image not found",
+                        },
+                        {
+                            status: 404,
+                        },
+                    );
+                }
+            }
+        }
+
         const allowedFields = [
             "name",
             "slug",
@@ -143,7 +180,9 @@ export async function PATCH(request, { params }) {
         const category = await Category.findByIdAndUpdate(id, updateData, {
             new: true,
             runValidators: true,
-        }).lean();
+        })
+            .populate("image")
+            .lean();
 
         if (!category) {
             return NextResponse.json(
@@ -212,7 +251,6 @@ export async function DELETE(request, { params }) {
 
         const session = await getSession();
 
-        // Permanent delete শুধুমাত্র Admin করতে পারবে
         const authorization = requireRole(session, [ROLES.ADMIN]);
 
         if (!authorization.authorized) {
