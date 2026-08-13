@@ -1,0 +1,128 @@
+import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+
+import connectDB from "@/lib/mongodb";
+import cloudinary from "@/lib/cloudinary";
+
+import Media from "@/models/Media";
+import Blog from "@/models/Blog";
+import Destination from "@/models/Destination";
+
+import { getSession } from "@/lib/auth/session";
+import { requireRole } from "@/lib/auth/authorization";
+import { ROLES } from "@/constants/roles";
+
+export async function DELETE(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Invalid media ID",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const media = await Media.findById(id);
+
+        if (!media) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Media not found",
+                },
+                {
+                    status: 404,
+                },
+            );
+        }
+
+        // Check whether the media is being used by a Blog
+        const blogUsingMedia = await Blog.exists({
+            $or: [{ featuredImage: media._id }, { images: media._id }],
+        });
+
+        if (blogUsingMedia) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "This media is being used by a blog and cannot be deleted",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        // Check whether the media is being used by a Destination
+        const destinationUsingMedia = await Destination.exists({
+            $or: [{ featuredImage: media._id }, { images: media._id }],
+        });
+
+        if (destinationUsingMedia) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "This media is being used by a destination and cannot be deleted",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        // Delete from Cloudinary
+        await cloudinary.uploader.destroy(media.publicId, {
+            resource_type: media.resourceType || "image",
+        });
+
+        // Delete from MongoDB
+        await Media.findByIdAndDelete(media._id);
+
+        return NextResponse.json({
+            success: true,
+            message: "Media deleted successfully",
+            data: {
+                id: media._id,
+                publicId: media.publicId,
+            },
+        });
+    } catch (error) {
+        console.error("DELETE admin media error:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to delete media",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
