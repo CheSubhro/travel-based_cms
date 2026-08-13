@@ -106,3 +106,50 @@ export async function POST(request) {
         );
     }
 }
+
+export async function GET() {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const blogs = await Blog.find()
+            .populate("featuredImage")
+            .populate("category")
+            .populate("tags")
+            .populate("author", "name email")
+            .sort({ createdAt: -1 })
+            .lean();
+
+        return NextResponse.json({
+            success: true,
+            data: blogs,
+        });
+    } catch (error) {
+        console.error("GET admin blogs error:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to fetch blogs",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
