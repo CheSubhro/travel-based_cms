@@ -205,3 +205,74 @@ export async function PATCH(request, { params }) {
         );
     }
 }
+
+export async function DELETE(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        // Permanent delete শুধুমাত্র Admin করতে পারবে
+        const authorization = requireRole(session, [ROLES.ADMIN]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Invalid category ID",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const category = await Category.findByIdAndDelete(id);
+
+        if (!category) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Category not found",
+                },
+                {
+                    status: 404,
+                },
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Category deleted successfully",
+            data: {
+                id: category._id,
+            },
+        });
+    } catch (error) {
+        console.error("DELETE admin category error:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to delete category",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
