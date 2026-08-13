@@ -206,3 +206,73 @@ export async function PATCH(request, { params }) {
         );
     }
 }
+
+export async function DELETE(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Invalid destination ID",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const destination = await Destination.findByIdAndDelete(id);
+
+        if (!destination) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Destination not found",
+                },
+                {
+                    status: 404,
+                },
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Destination deleted successfully",
+            data: {
+                id: destination._id,
+            },
+        });
+    } catch (error) {
+        console.error("DELETE admin destination error:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to delete destination",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
