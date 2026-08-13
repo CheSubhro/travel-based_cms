@@ -54,6 +54,7 @@ const mediaSchema = new mongoose.Schema(
             type: String,
             trim: true,
             maxlength: 200,
+            required: [true, "Alt text is required"],
         },
 
         caption: {

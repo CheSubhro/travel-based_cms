@@ -11,10 +11,9 @@ import { ROLES } from "@/constants/roles";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
-
 
 export async function POST(request) {
     try {
@@ -39,8 +38,20 @@ export async function POST(request) {
         const formData = await request.formData();
 
         const file = formData.get("file");
-        const alt = formData.get("alt") || "";
-        const caption = formData.get("caption") || "";
+        const alt = formData.get("alt")?.toString().trim() || "";
+        const caption = formData.get("caption")?.toString().trim() || "";
+
+        if (alt.length > 200) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Alt text cannot exceed 200 characters",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
 
         if (!file || typeof file === "string") {
             return NextResponse.json(
@@ -84,6 +95,18 @@ export async function POST(request) {
                 {
                     success: false,
                     message: "Image size cannot exceed 5MB",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        if (!alt) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Alt text is required",
                 },
                 {
                     status: 400,
