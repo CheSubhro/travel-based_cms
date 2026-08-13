@@ -94,3 +94,44 @@ export async function POST(request) {
         );
     }
 }
+
+export async function GET() {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const categories = await Category.find().sort({ createdAt: -1 }).lean();
+
+        return NextResponse.json({
+            success: true,
+            data: categories,
+        });
+    } catch (error) {
+        console.error("GET admin categories error:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to fetch categories",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
