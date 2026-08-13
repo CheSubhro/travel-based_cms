@@ -13,6 +13,9 @@ const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif"];
 
+const ALLOWED_EXTENSIONS = [".jpg", ".jpeg", ".png", ".webp"];
+
+
 export async function POST(request) {
     try {
         await connectDB();
@@ -56,7 +59,19 @@ export async function POST(request) {
                 {
                     success: false,
                     message:
-                        "Invalid image type. Only JPEG, PNG, WebP and GIF are allowed",
+                        "Invalid image type. Only JPEG, PNG and WebP are allowed",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        if (file.size <= 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Image file is empty",
                 },
                 {
                     status: 400,
@@ -69,6 +84,25 @@ export async function POST(request) {
                 {
                     success: false,
                     message: "Image size cannot exceed 5MB",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const originalName = file.name.toLowerCase();
+
+        const hasValidExtension = ALLOWED_EXTENSIONS.some((extension) =>
+            originalName.endsWith(extension),
+        );
+
+        if (!hasValidExtension) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "Invalid image extension. Only JPG, JPEG, PNG and WebP are allowed",
                 },
                 {
                     status: 400,
