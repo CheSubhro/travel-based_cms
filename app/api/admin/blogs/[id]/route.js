@@ -217,3 +217,73 @@ export async function PATCH(request, { params }) {
         );
     }
 }
+
+export async function DELETE(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Invalid blog ID",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const blog = await Blog.findByIdAndDelete(id);
+
+        if (!blog) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Blog not found",
+                },
+                {
+                    status: 404,
+                },
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Blog deleted successfully",
+            data: {
+                id: blog._id,
+            },
+        });
+    } catch (error) {
+        console.error("DELETE admin blog error:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to delete blog",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
