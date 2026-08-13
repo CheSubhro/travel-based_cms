@@ -121,6 +121,44 @@ export async function PATCH(request, { params }) {
 
         const body = await request.json();
 
+        const { featuredImage } = body;
+
+        if (featuredImage !== undefined) {
+            if (
+                featuredImage !== null &&
+                !mongoose.Types.ObjectId.isValid(featuredImage)
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Invalid featured image ID",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+
+            if (featuredImage) {
+                const mediaExists = await Media.exists({
+                    _id: featuredImage,
+                    isActive: true,
+                });
+
+                if (!mediaExists) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            message: "Featured image not found",
+                        },
+                        {
+                            status: 404,
+                        },
+                    );
+                }
+            }
+        }
+
         const allowedFields = [
             "title",
             "slug",

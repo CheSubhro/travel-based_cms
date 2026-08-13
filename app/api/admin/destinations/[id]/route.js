@@ -48,6 +48,7 @@ export async function GET(request, { params }) {
 
         const destination = await Destination.findById(id)
             .populate("images")
+            .populate("featuredImage")
             .populate("categories")
             .populate("author", "name email")
             .lean();
@@ -119,6 +120,44 @@ export async function PATCH(request, { params }) {
 
         const body = await request.json();
 
+        const { featuredImage } = body;
+
+        if (featuredImage !== undefined) {
+            if (
+                featuredImage !== null &&
+                !mongoose.Types.ObjectId.isValid(featuredImage)
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Invalid featured image ID",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+
+            if (featuredImage) {
+                const mediaExists = await Media.exists({
+                    _id: featuredImage,
+                    isActive: true,
+                });
+
+                if (!mediaExists) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            message: "Featured image not found",
+                        },
+                        {
+                            status: 404,
+                        },
+                    );
+                }
+            }
+        }
+
         const allowedFields = [
             "title",
             "slug",
@@ -126,6 +165,7 @@ export async function PATCH(request, { params }) {
             "description",
             "location",
             "images",
+            "featuredImage",
             "featured",
             "status",
             "categories",
@@ -160,6 +200,7 @@ export async function PATCH(request, { params }) {
             },
         )
             .populate("images")
+            .populate("featuredImage")
             .populate("categories")
             .populate("author", "name email");
 

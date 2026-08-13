@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-
+import mongoose from "mongoose";
 import connectDB from "@/lib/mongodb";
 import Destination from "@/models/Destination";
 import Media from "@/models/Media";
@@ -31,6 +31,7 @@ export async function GET() {
 
         const destinations = await Destination.find()
             .populate("images")
+            .populate("featuredImage")
             .populate("categories")
             .populate("author", "name email")
             .sort({ createdAt: -1 })
@@ -84,10 +85,47 @@ export async function POST(request) {
             description,
             location,
             images,
+            featuredImage,
             featured,
             status,
             categories,
         } = body;
+
+        if (featuredImage !== undefined) {
+            if (
+                featuredImage !== null &&
+                !mongoose.Types.ObjectId.isValid(featuredImage)
+            ) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Invalid featured image ID",
+                    },
+                    {
+                        status: 400,
+                    },
+                );
+            }
+
+            if (featuredImage) {
+                const mediaExists = await Media.exists({
+                    _id: featuredImage,
+                    isActive: true,
+                });
+
+                if (!mediaExists) {
+                    return NextResponse.json(
+                        {
+                            success: false,
+                            message: "Featured image not found",
+                        },
+                        {
+                            status: 404,
+                        },
+                    );
+                }
+            }
+        }
 
         const destination = await Destination.create({
             title,
@@ -96,6 +134,7 @@ export async function POST(request) {
             description,
             location,
             images,
+            featuredImage,
             featured,
             status,
             categories,
