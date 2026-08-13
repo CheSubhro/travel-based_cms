@@ -1,6 +1,6 @@
 
 import mongoose from "mongoose";
-import bcrypt from "bcryptjs";
+import { hashPassword } from "../lib/auth/password.js";
 import User from "../models/User.js";
 import { ROLES } from "../constants/roles.js";
 
@@ -35,7 +35,7 @@ const seedAdmin = async () => {
             return;
         }
 
-        const hashedPassword = await bcrypt.hash(adminPassword, 12);
+        const hashedPassword = await hashPassword(adminPassword);
 
         await User.create({
             name: adminName,
