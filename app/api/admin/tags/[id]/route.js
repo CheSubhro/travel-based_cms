@@ -198,3 +198,74 @@ export async function PATCH(request, { params }) {
         );
     }
 }
+
+export async function DELETE(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        // Permanent delete শুধুমাত্র Admin করতে পারবে
+        const authorization = requireRole(session, [ROLES.ADMIN]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Invalid tag ID",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const tag = await Tag.findByIdAndDelete(id);
+
+        if (!tag) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Tag not found",
+                },
+                {
+                    status: 404,
+                },
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Tag deleted successfully",
+            data: {
+                id: tag._id,
+            },
+        });
+    } catch (error) {
+        console.error("DELETE admin tag error:", error);
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to delete tag",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
