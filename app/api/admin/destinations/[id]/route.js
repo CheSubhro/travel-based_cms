@@ -82,3 +82,127 @@ export async function GET(request, { params }) {
         );
     }
 }
+
+export async function PATCH(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Invalid destination ID",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const body = await request.json();
+
+        const allowedFields = [
+            "title",
+            "slug",
+            "shortDescription",
+            "description",
+            "location",
+            "images",
+            "featured",
+            "status",
+            "categories",
+        ];
+
+        const updateData = {};
+
+        for (const field of allowedFields) {
+            if (body[field] !== undefined) {
+                updateData[field] = body[field];
+            }
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "No valid fields provided for update",
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const destination = await Destination.findByIdAndUpdate(
+            id,
+            updateData,
+            {
+                new: true,
+                runValidators: true,
+            },
+        )
+            .populate("images")
+            .populate("categories")
+            .populate("author", "name email");
+
+        if (!destination) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Destination not found",
+                },
+                {
+                    status: 404,
+                },
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Destination updated successfully",
+            data: destination,
+        });
+    } catch (error) {
+        console.error("PATCH admin destination error:", error);
+
+        if (error.code === 11000) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Destination slug already exists",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to update destination",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
