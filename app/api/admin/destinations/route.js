@@ -54,3 +54,87 @@ export async function GET() {
         );
     }
 }
+
+export async function POST(request) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
+        if (!authorization.authorized) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: authorization.message,
+                },
+                {
+                    status: authorization.status,
+                },
+            );
+        }
+
+        const body = await request.json();
+
+        const {
+            title,
+            slug,
+            shortDescription,
+            description,
+            location,
+            images,
+            featured,
+            status,
+            categories,
+        } = body;
+
+        const destination = await Destination.create({
+            title,
+            slug,
+            shortDescription,
+            description,
+            location,
+            images,
+            featured,
+            status,
+            categories,
+            author: session.userId,
+        });
+
+        return NextResponse.json(
+            {
+                success: true,
+                message: "Destination created successfully",
+                data: destination,
+            },
+            {
+                status: 201,
+            },
+        );
+    } catch (error) {
+        console.error("POST admin destination error:", error);
+
+        if (error.code === 11000) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Destination slug already exists",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        return NextResponse.json(
+            {
+                success: false,
+                message: "Failed to create destination",
+            },
+            {
+                status: 500,
+            },
+        );
+    }
+}
