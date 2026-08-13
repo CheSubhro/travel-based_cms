@@ -30,7 +30,7 @@ export async function proxy(request) {
     }
 
     if (session.role !== "admin") {
-        return NextResponse.redirect(new URL("/admin/login", request.url));
+        return NextResponse.redirect(new URL("/unauthorized", request.url));
     }
 
     return NextResponse.next();
