@@ -26,7 +26,19 @@ export async function proxy(request) {
     const session = await verifySession(sessionToken);
 
     if (!session) {
-        return NextResponse.redirect(new URL("/admin/login", request.url));
+        const response = NextResponse.redirect(
+            new URL("/admin/login", request.url),
+        );
+
+        response.cookies.set("session", "", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            path: "/",
+            maxAge: 0,
+        });
+
+        return response;
     }
 
     if (session.role !== "admin") {
