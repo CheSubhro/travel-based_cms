@@ -1,6 +1,22 @@
+import connectDB from "@/lib/mongodb";
+
+import Blog from "@/models/Blog";
+import Destination from "@/models/Destination";
+import Category from "@/models/Category";
+import Media from "@/models/Media";
+
 import DashboardCard from "../../components/DashboardCard";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+    await connectDB();
+
+    const [blogs, destinations, categories, media] = await Promise.all([
+        Blog.countDocuments(),
+        Destination.countDocuments(),
+        Category.countDocuments(),
+        Media.countDocuments(),
+    ]);
+
     return (
         <div>
             <div className="mb-6">
@@ -14,28 +30,28 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
                 <DashboardCard
                     title="Blogs"
-                    value="0"
+                    value={blogs}
                     description="Total blog posts"
                     type="blogs"
                 />
 
                 <DashboardCard
                     title="Destinations"
-                    value="0"
+                    value={destinations}
                     description="Total destinations"
                     type="destinations"
                 />
 
                 <DashboardCard
                     title="Categories"
-                    value="0"
+                    value={categories}
                     description="Total categories"
                     type="categories"
                 />
 
                 <DashboardCard
                     title="Media"
-                    value="0"
+                    value={media}
                     description="Total media files"
                     type="media"
                 />
