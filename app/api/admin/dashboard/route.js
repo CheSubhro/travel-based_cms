@@ -31,33 +31,43 @@ export async function GET() {
             draftBlogs,
             archivedBlogs,
             featuredBlogs,
+            recentBlogs,
+
             totalDestinations,
             publishedDestinations,
             draftDestinations,
             archivedDestinations,
             featuredDestinations,
+
             totalCategories,
             activeCategories,
             inactiveCategories,
+
             totalMedia,
             activeMedia,
         ] = await Promise.all([
+            // Blogs
             Blog.countDocuments(),
             Blog.countDocuments({ status: "published" }),
             Blog.countDocuments({ status: "draft" }),
             Blog.countDocuments({ status: "archived" }),
             Blog.countDocuments({ featured: true }),
 
+            Blog.find().sort({ createdAt: -1 }).limit(5).lean(),
+
+            // Destinations
             Destination.countDocuments(),
             Destination.countDocuments({ status: "published" }),
             Destination.countDocuments({ status: "draft" }),
             Destination.countDocuments({ status: "archived" }),
             Destination.countDocuments({ featured: true }),
 
+            // Categories
             Category.countDocuments(),
             Category.countDocuments({ isActive: true }),
             Category.countDocuments({ isActive: false }),
 
+            // Media
             Media.countDocuments(),
             Media.countDocuments({ isActive: true }),
         ]);
@@ -71,6 +81,7 @@ export async function GET() {
                     draft: draftBlogs,
                     archived: archivedBlogs,
                     featured: featuredBlogs,
+                    recent: recentBlogs,
                 },
 
                 destinations: {
