@@ -5,9 +5,6 @@ import connectDB from "@/lib/mongodb";
 
 import Blog from "@/models/Blog";
 import Media from "@/models/Media";
-import Category from "@/models/Category";
-import Tag from "@/models/Tag";
-import User from "@/models/User";
 
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
@@ -168,8 +165,74 @@ export async function GET(request) {
 
         const { page, limit, skip } = getPaginationParams(searchParams);
 
+        const status = searchParams.get("status");
+        const featured = searchParams.get("featured");
+        const category = searchParams.get("category");
+        const tag = searchParams.get("tag");
+        const author = searchParams.get("author");
+        const search = searchParams.get("search");
+
         const filter = {};
 
+        if (status) {
+            const allowedStatuses = ["draft", "published", "archived"];
+
+            if (!allowedStatuses.includes(status)) {
+                return apiError("Invalid blog status", 400);
+            }
+
+            filter.status = status;
+        }
+
+        if (featured !== null) {
+            if (featured !== "true" && featured !== "false") {
+                return apiError("Featured must be true or false", 400);
+            }
+
+            filter.featured = featured === "true";
+        }
+
+        if (category) {
+            if (!mongoose.Types.ObjectId.isValid(category)) {
+                return apiError("Invalid category ID", 400);
+            }
+
+            filter.category = category;
+        }
+
+        if (tag) {
+            if (!mongoose.Types.ObjectId.isValid(tag)) {
+                return apiError("Invalid tag ID", 400);
+            }
+
+            filter.tags = tag;
+        }
+
+        if (author) {
+            if (!mongoose.Types.ObjectId.isValid(author)) {
+                return apiError("Invalid author ID", 400);
+            }
+
+            filter.author = author;
+        }
+        if (search?.trim()) {
+            const searchTerm = search.trim();
+
+            filter.$or = [
+                {
+                    title: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+                {
+                    excerpt: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+            ];
+        }
         const [blogs, total] = await Promise.all([
             Blog.find(filter)
                 .populate("featuredImage")
@@ -192,6 +255,14 @@ export async function GET(request) {
                 limit,
                 total,
             }),
+            filters: {
+                status: status || null,
+                featured: featured !== null ? featured === "true" : null,
+                category: category || null,
+                tag: tag || null,
+                author: author || null,
+                search: search?.trim() || null,
+            },
         });
     } catch (error) {
         console.error("GET admin blogs error:", error);

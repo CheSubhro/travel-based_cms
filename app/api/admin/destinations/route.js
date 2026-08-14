@@ -30,11 +30,67 @@ export async function GET(request) {
         }
 
         const { searchParams } = new URL(request.url);
-
         const { page, limit, skip } = getPaginationParams(searchParams);
+        const status = searchParams.get("status");
+        const featured = searchParams.get("featured");
+        const category = searchParams.get("category");
+        const search = searchParams.get("search");
+
+        const filter = {};
+
+        if (status) {
+            const allowedStatuses = ["draft", "published", "archived"];
+
+            if (!allowedStatuses.includes(status)) {
+                return apiError("Invalid destination status", 400);
+            }
+
+            filter.status = status;
+        }
+
+        if (featured !== null) {
+            if (featured !== "true" && featured !== "false") {
+                return apiError("Featured must be true or false", 400);
+            }
+
+            filter.featured = featured === "true";
+        }
+
+        if (category) {
+            if (!mongoose.Types.ObjectId.isValid(category)) {
+                return apiError("Invalid category ID", 400);
+            }
+
+            filter.categories = category;
+        }
+
+        if (search?.trim()) {
+            const searchTerm = search.trim();
+
+            filter.$or = [
+                {
+                    title: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+                {
+                    shortDescription: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+                {
+                    location: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+            ];
+        }
 
         const [destinations, total] = await Promise.all([
-            Destination.find()
+            Destination.find(filter)
                 .populate("images")
                 .populate("featuredImage")
                 .populate("categories")
@@ -44,7 +100,7 @@ export async function GET(request) {
                 .limit(limit)
                 .lean(),
 
-            Destination.countDocuments(),
+            Destination.countDocuments(filter),
         ]);
 
         const pagination = createPaginationMeta({
@@ -57,6 +113,12 @@ export async function GET(request) {
             success: true,
             data: destinations,
             pagination,
+            filters: {
+                status: status || null,
+                featured: featured !== null ? featured === "true" : null,
+                category: category || null,
+                search: search?.trim() || null,
+            },
         });
     } catch (error) {
         console.error("GET admin destinations error:", error);
