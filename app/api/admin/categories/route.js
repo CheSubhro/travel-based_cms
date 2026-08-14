@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 
 import connectDB from "@/lib/mongodb";
 
@@ -13,6 +12,8 @@ import { ROLES } from "@/constants/roles";
 import { createCategorySchema } from "@/lib/validation/category";
 import { getValidationErrors } from "@/lib/validation/common";
 
+import { apiError } from "@/lib/api/error";
+
 export async function POST(request) {
     try {
         await connectDB();
@@ -22,15 +23,7 @@ export async function POST(request) {
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const body = await request.json();
@@ -39,15 +32,10 @@ export async function POST(request) {
         const validation = createCategorySchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Validation failed",
-                    errors: getValidationErrors(validation.error),
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
             );
         }
 
@@ -58,33 +46,13 @@ export async function POST(request) {
 
         // Validate category image
         if (image !== undefined && image !== null) {
-            if (!mongoose.Types.ObjectId.isValid(image)) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: "Invalid category image ID",
-                    },
-                    {
-                        status: 400,
-                    },
-                );
-            }
-
             const mediaExists = await Media.exists({
                 _id: image,
                 isActive: true,
             });
 
             if (!mediaExists) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: "Category image not found",
-                    },
-                    {
-                        status: 404,
-                    },
-                );
+                return apiError("Category image not found", 404);
             }
         }
 
@@ -114,15 +82,7 @@ export async function POST(request) {
         console.error("POST admin category error:", error);
 
         if (error.code === 11000) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Category slug already exists",
-                },
-                {
-                    status: 409,
-                },
-            );
+            return apiError("Category slug already exists", 409);
         }
 
         if (error.name === "ValidationError") {
@@ -130,27 +90,10 @@ export async function POST(request) {
                 (err) => err.message,
             );
 
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Category validation failed",
-                    errors,
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Category validation failed", 400, errors);
         }
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to create category",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to create category", 500);
     }
 }
 
@@ -163,15 +106,7 @@ export async function GET() {
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const categories = await Category.find()
@@ -186,14 +121,6 @@ export async function GET() {
     } catch (error) {
         console.error("GET admin categories error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch categories",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to fetch categories", 500);
     }
 }

@@ -13,6 +13,8 @@ import { ROLES } from "@/constants/roles";
 import { updateCategorySchema } from "@/lib/validation/category";
 import { getValidationErrors } from "@/lib/validation/common";
 
+import { apiError } from "@/lib/api/error";
+
 export async function GET(request, { params }) {
     try {
         await connectDB();
@@ -22,43 +24,19 @@ export async function GET(request, { params }) {
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { id } = await params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid category ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid category ID", 400);
         }
 
         const category = await Category.findById(id).populate("image").lean();
 
         if (!category) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Category not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Category not found", 404);
         }
 
         return NextResponse.json({
@@ -68,15 +46,7 @@ export async function GET(request, { params }) {
     } catch (error) {
         console.error("GET admin category error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch category",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to fetch category", 500);
     }
 }
 
@@ -89,29 +59,13 @@ export async function PATCH(request, { params }) {
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { id } = await params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid category ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid category ID", 400);
         }
 
         const body = await request.json();
@@ -120,15 +74,10 @@ export async function PATCH(request, { params }) {
         const validation = updateCategorySchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Validation failed",
-                    errors: getValidationErrors(validation.error),
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
             );
         }
 
@@ -139,46 +88,18 @@ export async function PATCH(request, { params }) {
         const { image } = updateData;
 
         if (image !== undefined && image !== null) {
-            if (!mongoose.Types.ObjectId.isValid(image)) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: "Invalid category image ID",
-                    },
-                    {
-                        status: 400,
-                    },
-                );
-            }
-
             const mediaExists = await Media.exists({
                 _id: image,
                 isActive: true,
             });
 
             if (!mediaExists) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: "Category image not found",
-                    },
-                    {
-                        status: 404,
-                    },
-                );
+                return apiError("Category image not found", 404);
             }
         }
 
         if (Object.keys(updateData).length === 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "No valid fields provided for update",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("No valid fields provided for update", 400);
         }
 
         const category = await Category.findByIdAndUpdate(id, updateData, {
@@ -189,15 +110,7 @@ export async function PATCH(request, { params }) {
             .lean();
 
         if (!category) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Category not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Category not found", 404);
         }
 
         return NextResponse.json({
@@ -209,15 +122,7 @@ export async function PATCH(request, { params }) {
         console.error("PATCH admin category error:", error);
 
         if (error.code === 11000) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Category slug already exists",
-                },
-                {
-                    status: 409,
-                },
-            );
+            return apiError("Category slug already exists", 409);
         }
 
         if (error.name === "ValidationError") {
@@ -225,27 +130,10 @@ export async function PATCH(request, { params }) {
                 (err) => err.message,
             );
 
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Category validation failed",
-                    errors,
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Category validation failed", 400, errors);
         }
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to update category",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to update category", 500);
     }
 }
 
@@ -258,43 +146,19 @@ export async function DELETE(request, { params }) {
         const authorization = requireRole(session, [ROLES.ADMIN]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { id } = await params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid category ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid category ID", 400);
         }
 
         const category = await Category.findByIdAndDelete(id);
 
         if (!category) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Category not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Category not found", 404);
         }
 
         return NextResponse.json({
@@ -307,14 +171,6 @@ export async function DELETE(request, { params }) {
     } catch (error) {
         console.error("DELETE admin category error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to delete category",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to delete category", 500);
     }
 }
