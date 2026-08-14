@@ -90,6 +90,7 @@ export async function PATCH(request, { params }) {
 
         const { featuredImage } = updateData;
 
+        // Validate featured image
         if (featuredImage !== undefined) {
             if (
                 featuredImage !== null &&
@@ -110,6 +111,7 @@ export async function PATCH(request, { params }) {
             }
         }
 
+        // Validate gallery images
         if (updateData.images?.length > 0) {
             const mediaCount = await Media.countDocuments({
                 _id: { $in: updateData.images },
@@ -124,6 +126,7 @@ export async function PATCH(request, { params }) {
             }
         }
 
+        // Validate categories
         if (updateData.categories?.length > 0) {
             const categoryCount = await Category.countDocuments({
                 _id: { $in: updateData.categories },
@@ -176,7 +179,7 @@ export async function PATCH(request, { params }) {
                 (err) => err.message,
             );
 
-            return apiError("Validation failed", 400, errors);
+            return apiError("Destination validation failed", 400, errors);
         }
 
         return apiError("Failed to update destination", 500);

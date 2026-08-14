@@ -1,9 +1,12 @@
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
+
 import connectDB from "@/lib/mongodb";
+
 import Destination from "@/models/Destination";
 import Media from "@/models/Media";
 import Category from "@/models/Category";
+
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
@@ -16,11 +19,15 @@ import { apiError } from "@/lib/api/error";
 export async function GET() {
     try {
         await connectDB();
+
         const session = await getSession();
+
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
         if (!authorization.authorized) {
             return apiError(authorization.message, authorization.status);
         }
+
         const destinations = await Destination.find()
             .populate("images")
             .populate("featuredImage")
@@ -28,9 +35,14 @@ export async function GET() {
             .populate("author", "name email")
             .sort({ createdAt: -1 })
             .lean();
-        return NextResponse.json({ success: true, data: destinations });
+
+        return NextResponse.json({
+            success: true,
+            data: destinations,
+        });
     } catch (error) {
         console.error("GET admin destinations error:", error);
+
         return apiError("Failed to fetch destinations", 500);
     }
 }
@@ -38,13 +50,19 @@ export async function GET() {
 export async function POST(request) {
     try {
         await connectDB();
+
         const session = await getSession();
+
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
         if (!authorization.authorized) {
             return apiError(authorization.message, authorization.status);
         }
+
         const body = await request.json();
+
         const validation = createDestinationSchema.safeParse(body);
+
         if (!validation.success) {
             return apiError(
                 "Validation failed",
@@ -52,7 +70,9 @@ export async function POST(request) {
                 getValidationErrors(validation.error),
             );
         }
+
         const data = validation.data;
+
         const {
             title,
             slug,
@@ -65,6 +85,8 @@ export async function POST(request) {
             status,
             categories,
         } = data;
+
+        // Validate featured image
         if (featuredImage !== undefined) {
             if (
                 featuredImage !== null &&
@@ -72,21 +94,26 @@ export async function POST(request) {
             ) {
                 return apiError("Invalid featured image ID", 400);
             }
+
             if (featuredImage) {
                 const mediaExists = await Media.exists({
                     _id: featuredImage,
                     isActive: true,
                 });
+
                 if (!mediaExists) {
                     return apiError("Featured image not found", 404);
                 }
             }
         }
+
+        // Validate gallery images
         if (images?.length > 0) {
             const mediaCount = await Media.countDocuments({
                 _id: { $in: images },
                 isActive: true,
             });
+
             if (mediaCount !== images.length) {
                 return apiError(
                     "One or more images were not found or inactive",
@@ -94,11 +121,14 @@ export async function POST(request) {
                 );
             }
         }
+
+        // Validate categories
         if (categories?.length > 0) {
             const categoryCount = await Category.countDocuments({
                 _id: { $in: categories },
                 isActive: true,
             });
+
             if (categoryCount !== categories.length) {
                 return apiError(
                     "One or more categories were not found or inactive",
@@ -106,6 +136,7 @@ export async function POST(request) {
                 );
             }
         }
+
         const destination = await Destination.create({
             title,
             slug,
@@ -119,25 +150,32 @@ export async function POST(request) {
             categories,
             author: session.userId,
         });
+
         return NextResponse.json(
             {
                 success: true,
                 message: "Destination created successfully",
                 data: destination,
             },
-            { status: 201 },
+            {
+                status: 201,
+            },
         );
     } catch (error) {
         console.error("POST admin destination error:", error);
+
         if (error.code === 11000) {
             return apiError("Destination slug already exists", 409);
         }
+
         if (error.name === "ValidationError") {
             const errors = Object.values(error.errors).map(
                 (err) => err.message,
             );
-            return apiError("Validation failed", 400, errors);
+
+            return apiError("Destination validation failed", 400, errors);
         }
+
         return apiError("Failed to create destination", 500);
     }
 }
