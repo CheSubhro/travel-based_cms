@@ -9,8 +9,7 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
-import { createMediaSchema } from "@/lib/validation/media";
-import { getValidationErrors } from "@/lib/validation/common";
+import { apiError } from "@/lib/api/error";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -27,15 +26,7 @@ export async function POST(request) {
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const formData = await request.formData();
@@ -46,104 +37,32 @@ export async function POST(request) {
 
         const caption = formData.get("caption")?.toString().trim() || "";
 
-        /*
-         * -----------------------------------------
-         * Validate metadata
-         * -----------------------------------------
-         */
-
-        const validation = createMediaSchema.safeParse({
-            alt,
-            caption,
-        });
-
-        if (!validation.success) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Validation failed",
-                    errors: getValidationErrors(validation.error),
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
-        const data = validation.data;
-
-        /*
-         * -----------------------------------------
-         * Validate file exists
-         * -----------------------------------------
-         */
-
         if (!file || typeof file === "string") {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Image file is required",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Image file is required", 400);
         }
 
-        /*
-         * -----------------------------------------
-         * Validate MIME type
-         * -----------------------------------------
-         */
+        if (!alt) {
+            return apiError("Alt text is required", 400);
+        }
+
+        if (alt.length > 200) {
+            return apiError("Alt text cannot exceed 200 characters", 400);
+        }
 
         if (!ALLOWED_TYPES.includes(file.type)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "Invalid image type. Only JPEG, PNG and WebP are allowed",
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Invalid image type. Only JPEG, PNG and WebP are allowed",
+                400,
             );
         }
 
-        /*
-         * -----------------------------------------
-         * Validate file size
-         * -----------------------------------------
-         */
-
         if (file.size <= 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Image file is empty",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Image file is empty", 400);
         }
 
         if (file.size > MAX_FILE_SIZE) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Image size cannot exceed 5MB",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Image size cannot exceed 5MB", 400);
         }
-
-        /*
-         * -----------------------------------------
-         * Validate file extension
-         * -----------------------------------------
-         */
 
         const originalName = file.name.toLowerCase();
 
@@ -152,31 +71,13 @@ export async function POST(request) {
         );
 
         if (!hasValidExtension) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "Invalid image extension. Only JPG, JPEG, PNG and WebP are allowed",
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Invalid image extension. Only JPG, JPEG, PNG and WebP are allowed",
+                400,
             );
         }
 
-        /*
-         * -----------------------------------------
-         * Convert file to buffer
-         * -----------------------------------------
-         */
-
         const buffer = Buffer.from(await file.arrayBuffer());
-
-        /*
-         * -----------------------------------------
-         * Upload to Cloudinary
-         * -----------------------------------------
-         */
 
         const uploadResult = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
@@ -196,12 +97,6 @@ export async function POST(request) {
             uploadStream.end(buffer);
         });
 
-        /*
-         * -----------------------------------------
-         * Save media document
-         * -----------------------------------------
-         */
-
         const media = await Media.create({
             publicId: uploadResult.public_id,
             url: uploadResult.secure_url,
@@ -211,8 +106,8 @@ export async function POST(request) {
             height: uploadResult.height,
             bytes: uploadResult.bytes,
             originalName: file.name,
-            alt: data.alt,
-            caption: data.caption,
+            alt,
+            caption,
             folder: "travel-cms",
             uploadedBy: session.userId,
         });
@@ -230,55 +125,18 @@ export async function POST(request) {
     } catch (error) {
         console.error("POST admin media error:", error);
 
-        /*
-         * -----------------------------------------
-         * Mongoose validation error
-         * -----------------------------------------
-         */
+        if (error.code === 11000) {
+            return apiError("Media with this public ID already exists", 409);
+        }
 
         if (error.name === "ValidationError") {
             const errors = Object.values(error.errors).map(
                 (err) => err.message,
             );
 
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Media validation failed",
-                    errors,
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Media validation failed", 400, errors);
         }
 
-        /*
-         * -----------------------------------------
-         * Duplicate publicId
-         * -----------------------------------------
-         */
-
-        if (error.code === 11000) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Media with this public ID already exists",
-                },
-                {
-                    status: 409,
-                },
-            );
-        }
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to upload image",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to upload image", 500);
     }
 }

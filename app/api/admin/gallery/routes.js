@@ -1,4 +1,3 @@
-
 import { NextResponse } from "next/server";
 import mongoose from "mongoose";
 
@@ -11,6 +10,11 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import { createGallerySchema } from "@/lib/validation/gallery";
+
+import { getValidationErrors } from "@/lib/validation/common";
+
+import { apiError } from "@/lib/api/error";
 
 export async function GET(request) {
     try {
@@ -18,21 +22,10 @@ export async function GET(request) {
 
         const session = await getSession();
 
-        const authorization = requireRole(session, [
-            ROLES.ADMIN,
-            ROLES.EDITOR,
-        ]);
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { searchParams } = new URL(request.url);
@@ -40,27 +33,11 @@ export async function GET(request) {
         const destinationId = searchParams.get("destinationId");
 
         if (!destinationId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination ID is required",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Destination ID is required", 400);
         }
 
         if (!mongoose.Types.ObjectId.isValid(destinationId)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid destination ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid destination ID", 400);
         }
 
         const destination = await Destination.findById(destinationId)
@@ -69,15 +46,7 @@ export async function GET(request) {
             .lean();
 
         if (!destination) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Destination not found", 404);
         }
 
         return NextResponse.json({
@@ -92,15 +61,7 @@ export async function GET(request) {
     } catch (error) {
         console.error("GET admin gallery error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch gallery",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to fetch gallery", 500);
     }
 }
 
@@ -110,115 +71,43 @@ export async function POST(request) {
 
         const session = await getSession();
 
-        const authorization = requireRole(session, [
-            ROLES.ADMIN,
-            ROLES.EDITOR,
-        ]);
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const body = await request.json();
 
-        const { destinationId, imageIds } = body;
+        const validation = createGallerySchema.safeParse(body);
 
-        if (!destinationId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination ID is required",
-                },
-                {
-                    status: 400,
-                },
+        if (!validation.success) {
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
             );
         }
 
-        if (!mongoose.Types.ObjectId.isValid(destinationId)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid destination ID",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
-        if (!Array.isArray(imageIds) || imageIds.length === 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "imageIds must be a non-empty array",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
-        const invalidImageIds = imageIds.filter(
-            (imageId) => !mongoose.Types.ObjectId.isValid(imageId),
-        );
-
-        if (invalidImageIds.length > 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "One or more image IDs are invalid",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
-        const mediaExists = await Media.find({
-            _id: { $in: imageIds },
-            isActive: true,
-        }).select("_id");
-
-        const existingMediaIds = mediaExists.map((media) =>
-            media._id.toString(),
-        );
-
-        const missingImageIds = imageIds.filter(
-            (imageId) => !existingMediaIds.includes(imageId),
-        );
-
-        if (missingImageIds.length > 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "One or more images were not found or inactive",
-                },
-                {
-                    status: 404,
-                },
-            );
-        }
+        const { destinationId, imageIds } = validation.data;
 
         const destination = await Destination.findById(destinationId);
 
         if (!destination) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination not found",
-                },
-                {
-                    status: 404,
-                },
+            return apiError("Destination not found", 404);
+        }
+
+        const mediaCount = await Media.countDocuments({
+            _id: {
+                $in: imageIds,
+            },
+            isActive: true,
+        });
+
+        if (mediaCount !== imageIds.length) {
+            return apiError(
+                "One or more images were not found or inactive",
+                404,
             );
         }
 
@@ -231,14 +120,9 @@ export async function POST(request) {
         );
 
         if (newImageIds.length === 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "All selected images are already in the gallery",
-                },
-                {
-                    status: 409,
-                },
+            return apiError(
+                "All selected images are already in the gallery",
+                409,
             );
         }
 
@@ -264,15 +148,7 @@ export async function POST(request) {
     } catch (error) {
         console.error("POST admin gallery error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to add images to gallery",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to add images to gallery", 500);
     }
 }
 
@@ -282,91 +158,30 @@ export async function PATCH(request) {
 
         const session = await getSession();
 
-        const authorization = requireRole(session, [
-            ROLES.ADMIN,
-            ROLES.EDITOR,
-        ]);
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const body = await request.json();
 
-        const { destinationId, imageIds } = body;
+        const validation = createGallerySchema.safeParse(body);
 
-        if (!destinationId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination ID is required",
-                },
-                {
-                    status: 400,
-                },
+        if (!validation.success) {
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
             );
         }
 
-        if (!mongoose.Types.ObjectId.isValid(destinationId)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid destination ID",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
-        if (!Array.isArray(imageIds)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "imageIds must be an array",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
-
-        const invalidImageIds = imageIds.filter(
-            (imageId) => !mongoose.Types.ObjectId.isValid(imageId),
-        );
-
-        if (invalidImageIds.length > 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "One or more image IDs are invalid",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
+        const { destinationId, imageIds } = validation.data;
 
         const destination = await Destination.findById(destinationId);
 
         if (!destination) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Destination not found", 404);
         }
 
         const currentImageIds = destination.images.map((imageId) =>
@@ -374,19 +189,14 @@ export async function PATCH(request) {
         );
 
         if (currentImageIds.length !== imageIds.length) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "Reorder request must contain all existing gallery images",
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Reorder request must contain all existing gallery images",
+                400,
             );
         }
 
         const sortedCurrentIds = [...currentImageIds].sort();
+
         const sortedRequestedIds = [...imageIds].sort();
 
         const sameImages = sortedCurrentIds.every(
@@ -394,15 +204,9 @@ export async function PATCH(request) {
         );
 
         if (!sameImages) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "Reorder request contains invalid gallery images",
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Reorder request contains invalid gallery images",
+                400,
             );
         }
 
@@ -428,15 +232,7 @@ export async function PATCH(request) {
     } catch (error) {
         console.error("PATCH admin gallery error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to reorder gallery",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to reorder gallery", 500);
     }
 }
 
@@ -446,76 +242,34 @@ export async function DELETE(request) {
 
         const session = await getSession();
 
-        const authorization = requireRole(session, [
-            ROLES.ADMIN,
-            ROLES.EDITOR,
-        ]);
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: 403,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { searchParams } = new URL(request.url);
 
         const destinationId = searchParams.get("destinationId");
+
         const imageId = searchParams.get("imageId");
 
         if (!destinationId || !imageId) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination ID and image ID are required",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Destination ID and image ID are required", 400);
         }
 
         if (!mongoose.Types.ObjectId.isValid(destinationId)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid destination ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid destination ID", 400);
         }
 
         if (!mongoose.Types.ObjectId.isValid(imageId)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid image ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid image ID", 400);
         }
 
         const destination = await Destination.findById(destinationId);
 
         if (!destination) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Destination not found", 404);
         }
 
         const imageExists = destination.images.some(
@@ -523,15 +277,7 @@ export async function DELETE(request) {
         );
 
         if (!imageExists) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Image is not present in the gallery",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Image is not present in the gallery", 404);
         }
 
         destination.images = destination.images.filter(
@@ -558,15 +304,6 @@ export async function DELETE(request) {
     } catch (error) {
         console.error("DELETE admin gallery error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to remove image from gallery",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to remove image from gallery", 500);
     }
 }
-

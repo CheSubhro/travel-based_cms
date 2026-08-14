@@ -13,6 +13,8 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import { apiError } from "@/lib/api/error";
+
 export async function DELETE(request, { params }) {
     try {
         await connectDB();
@@ -22,63 +24,22 @@ export async function DELETE(request, { params }) {
         const authorization = requireRole(session, [ROLES.ADMIN]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { id } = await params;
 
-        /*
-         * -----------------------------------------
-         * Validate Media ID
-         * -----------------------------------------
-         */
-
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid media ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid media ID", 400);
         }
-
-        /*
-         * -----------------------------------------
-         * Find media
-         * -----------------------------------------
-         */
 
         const media = await Media.findById(id);
 
         if (!media) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Media not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Media not found", 404);
         }
 
-        /*
-         * -----------------------------------------
-         * Check Blog usage
-         * -----------------------------------------
-         */
-
+        // Check Blog usage
         const blogUsingMedia = await Blog.exists({
             $or: [
                 {
@@ -91,24 +52,13 @@ export async function DELETE(request, { params }) {
         });
 
         if (blogUsingMedia) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "This media is being used by a blog and cannot be deleted",
-                },
-                {
-                    status: 409,
-                },
+            return apiError(
+                "This media is being used by a blog and cannot be deleted",
+                409,
             );
         }
 
-        /*
-         * -----------------------------------------
-         * Check Destination usage
-         * -----------------------------------------
-         */
-
+        // Check Destination usage
         const destinationUsingMedia = await Destination.exists({
             $or: [
                 {
@@ -121,57 +71,30 @@ export async function DELETE(request, { params }) {
         });
 
         if (destinationUsingMedia) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "This media is being used by a destination and cannot be deleted",
-                },
-                {
-                    status: 409,
-                },
+            return apiError(
+                "This media is being used by a destination and cannot be deleted",
+                409,
             );
         }
 
-        /*
-         * -----------------------------------------
-         * Check Category usage
-         * -----------------------------------------
-         */
-
+        // Check Category usage
         const categoryUsingMedia = await Category.exists({
             image: media._id,
         });
 
         if (categoryUsingMedia) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message:
-                        "This media is being used by a category and cannot be deleted",
-                },
-                {
-                    status: 409,
-                },
+            return apiError(
+                "This media is being used by a category and cannot be deleted",
+                409,
             );
         }
 
-        /*
-         * -----------------------------------------
-         * Delete from Cloudinary
-         * -----------------------------------------
-         */
-
+        // Delete from Cloudinary
         await cloudinary.uploader.destroy(media.publicId, {
             resource_type: media.resourceType || "image",
         });
 
-        /*
-         * -----------------------------------------
-         * Delete from MongoDB
-         * -----------------------------------------
-         */
-
+        // Delete from MongoDB
         await Media.findByIdAndDelete(media._id);
 
         return NextResponse.json({
@@ -185,14 +108,6 @@ export async function DELETE(request, { params }) {
     } catch (error) {
         console.error("DELETE admin media error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to delete media",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to delete media", 500);
     }
 }
