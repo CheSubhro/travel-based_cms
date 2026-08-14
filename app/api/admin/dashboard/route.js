@@ -26,6 +26,7 @@ export async function GET() {
         }
 
         const [
+            // Blogs
             totalBlogs,
             publishedBlogs,
             draftBlogs,
@@ -33,16 +34,20 @@ export async function GET() {
             featuredBlogs,
             recentBlogs,
 
+            // Destinations
             totalDestinations,
             publishedDestinations,
             draftDestinations,
             archivedDestinations,
             featuredDestinations,
+            recentDestinations,
 
+            // Categories
             totalCategories,
             activeCategories,
             inactiveCategories,
 
+            // Media
             totalMedia,
             activeMedia,
         ] = await Promise.all([
@@ -61,6 +66,8 @@ export async function GET() {
             Destination.countDocuments({ status: "draft" }),
             Destination.countDocuments({ status: "archived" }),
             Destination.countDocuments({ featured: true }),
+
+            Destination.find().sort({ createdAt: -1 }).limit(5).lean(),
 
             // Categories
             Category.countDocuments(),
@@ -90,6 +97,7 @@ export async function GET() {
                     draft: draftDestinations,
                     archived: archivedDestinations,
                     featured: featuredDestinations,
+                    recent: recentDestinations,
                 },
 
                 categories: {
