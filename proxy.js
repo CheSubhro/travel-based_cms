@@ -21,6 +21,13 @@ const verifySession = async (token) => {
 };
 
 export async function proxy(request) {
+    const pathname = request.nextUrl.pathname;
+
+    // Login page must be accessible without authentication
+    if (pathname === "/admin/login") {
+        return NextResponse.next();
+    }
+
     const sessionToken = request.cookies.get("session")?.value;
 
     const session = await verifySession(sessionToken);
