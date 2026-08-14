@@ -6,11 +6,13 @@ import connectDB from "@/lib/mongodb";
 import Destination from "@/models/Destination";
 import Media from "@/models/Media";
 import Category from "@/models/Category";
-import User from "@/models/User";
 
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
+
+import { updateDestinationSchema } from "@/lib/validation/destination";
+import { getValidationErrors } from "@/lib/validation/common";
 
 export async function GET(request, { params }) {
     try {
@@ -120,7 +122,24 @@ export async function PATCH(request, { params }) {
 
         const body = await request.json();
 
-        const { featuredImage } = body;
+        const validation = updateDestinationSchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Validation failed",
+                    errors: getValidationErrors(validation.error),
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const updateData = validation.data;
+
+        const { featuredImage } = updateData;
 
         if (featuredImage !== undefined) {
             if (
@@ -158,24 +177,43 @@ export async function PATCH(request, { params }) {
             }
         }
 
-        const allowedFields = [
-            "title",
-            "slug",
-            "shortDescription",
-            "description",
-            "location",
-            "images",
-            "featuredImage",
-            "featured",
-            "status",
-            "categories",
-        ];
+        if (updateData.images?.length > 0) {
+            const mediaCount = await Media.countDocuments({
+                _id: { $in: updateData.images },
+                isActive: true,
+            });
 
-        const updateData = {};
+            if (mediaCount !== updateData.images.length) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "One or more images were not found or inactive",
+                    },
+                    {
+                        status: 404,
+                    },
+                );
+            }
+        }
 
-        for (const field of allowedFields) {
-            if (body[field] !== undefined) {
-                updateData[field] = body[field];
+        if (updateData.categories?.length > 0) {
+            const categoryCount = await Category.countDocuments({
+                _id: { $in: updateData.categories },
+                isActive: true,
+            });
+
+            if (categoryCount !== updateData.categories.length) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "One or more categories were not found or inactive",
+                    },
+                    {
+                        status: 404,
+                    },
+                );
             }
         }
 

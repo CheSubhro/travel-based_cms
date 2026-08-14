@@ -4,10 +4,12 @@ import connectDB from "@/lib/mongodb";
 import Destination from "@/models/Destination";
 import Media from "@/models/Media";
 import Category from "@/models/Category";
-import User from "@/models/User";
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
+
+import { createDestinationSchema } from "@/lib/validation/destination";
+import { getValidationErrors } from "@/lib/validation/common";
 
 export async function GET() {
     try {
@@ -78,6 +80,23 @@ export async function POST(request) {
 
         const body = await request.json();
 
+        const validation = createDestinationSchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Validation failed",
+                    errors: getValidationErrors(validation.error),
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        const data = validation.data;
+
         const {
             title,
             slug,
@@ -89,7 +108,7 @@ export async function POST(request) {
             featured,
             status,
             categories,
-        } = body;
+        } = data;
 
         if (featuredImage !== undefined) {
             if (
@@ -127,6 +146,45 @@ export async function POST(request) {
             }
         }
 
+        if (data.images?.length > 0) {
+            const mediaCount = await Media.countDocuments({
+                _id: { $in: data.images },
+                isActive: true,
+            });
+
+            if (mediaCount !== data.images.length) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "One or more images were not found or inactive",
+                    },
+                    {
+                        status: 404,
+                    },
+                );
+            }
+        }
+
+        if (data.categories?.length > 0) {
+            const categoryCount = await Category.countDocuments({
+                _id: { $in: data.categories },
+                isActive: true,
+            });
+
+            if (categoryCount !== data.categories.length) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message:
+                            "One or more categories were not found or inactive",
+                    },
+                    {
+                        status: 404,
+                    },
+                );
+            }
+        }
         const destination = await Destination.create({
             title,
             slug,
