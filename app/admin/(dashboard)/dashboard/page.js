@@ -346,7 +346,90 @@ export default function DashboardPage() {
                     )}
                 </div>
             </div>
-            
+
+            <div className="mt-8">
+                <div className="mb-4 flex items-center justify-between">
+                    <h2 className="text-lg font-semibold text-gray-900">
+                        Recent Destinations
+                    </h2>
+
+                    <a
+                        href="/admin/destinations"
+                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                    >
+                        View all
+                    </a>
+                </div>
+
+                <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                    {statistics.destinations.recent.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-gray-500">
+                            No destinations found
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-200">
+                            {statistics.destinations.recent.map(
+                                (destination) => (
+                                    <div
+                                        key={destination._id}
+                                        className="flex items-center justify-between gap-4 p-5"
+                                    >
+                                        <div className="min-w-0">
+                                            <h3 className="truncate text-sm font-semibold text-gray-900">
+                                                {destination.title}
+                                            </h3>
+
+                                            <div className="mt-1 flex items-center gap-2 text-xs text-gray-500">
+                                                {destination.location && (
+                                                    <span>
+                                                        {[
+                                                            destination.location
+                                                                .city,
+                                                            destination.location
+                                                                .state,
+                                                            destination.location
+                                                                .country,
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join(", ")}
+                                                    </span>
+                                                )}
+
+                                                <span>
+                                                    {new Date(
+                                                        destination.createdAt,
+                                                    ).toLocaleDateString(
+                                                        "en-IN",
+                                                        {
+                                                            day: "numeric",
+                                                            month: "short",
+                                                            year: "numeric",
+                                                        },
+                                                    )}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <span
+                                            className={`shrink-0 rounded-full px-3 py-1 text-xs font-medium ${
+                                                destination.status ===
+                                                "published"
+                                                    ? "bg-green-100 text-green-700"
+                                                    : destination.status ===
+                                                        "draft"
+                                                      ? "bg-yellow-100 text-yellow-700"
+                                                      : "bg-gray-100 text-gray-700"
+                                            }`}
+                                        >
+                                            {destination.status}
+                                        </span>
+                                    </div>
+                                ),
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
         </div>
     );
 }
