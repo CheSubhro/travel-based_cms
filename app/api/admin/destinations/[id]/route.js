@@ -14,6 +14,8 @@ import { ROLES } from "@/constants/roles";
 import { updateDestinationSchema } from "@/lib/validation/destination";
 import { getValidationErrors } from "@/lib/validation/common";
 
+import { apiError } from "@/lib/api/error";
+
 export async function GET(request, { params }) {
     try {
         await connectDB();
@@ -23,29 +25,13 @@ export async function GET(request, { params }) {
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { id } = await params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid destination ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid destination ID", 400);
         }
 
         const destination = await Destination.findById(id)
@@ -56,15 +42,7 @@ export async function GET(request, { params }) {
             .lean();
 
         if (!destination) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Destination not found", 404);
         }
 
         return NextResponse.json({
@@ -74,15 +52,7 @@ export async function GET(request, { params }) {
     } catch (error) {
         console.error("GET admin destination error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch destination",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to fetch destination", 500);
     }
 }
 
@@ -95,29 +65,13 @@ export async function PATCH(request, { params }) {
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { id } = await params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid destination ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid destination ID", 400);
         }
 
         const body = await request.json();
@@ -125,15 +79,10 @@ export async function PATCH(request, { params }) {
         const validation = updateDestinationSchema.safeParse(body);
 
         if (!validation.success) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Validation failed",
-                    errors: getValidationErrors(validation.error),
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
             );
         }
 
@@ -146,15 +95,7 @@ export async function PATCH(request, { params }) {
                 featuredImage !== null &&
                 !mongoose.Types.ObjectId.isValid(featuredImage)
             ) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: "Invalid featured image ID",
-                    },
-                    {
-                        status: 400,
-                    },
-                );
+                return apiError("Invalid featured image ID", 400);
             }
 
             if (featuredImage) {
@@ -164,15 +105,7 @@ export async function PATCH(request, { params }) {
                 });
 
                 if (!mediaExists) {
-                    return NextResponse.json(
-                        {
-                            success: false,
-                            message: "Featured image not found",
-                        },
-                        {
-                            status: 404,
-                        },
-                    );
+                    return apiError("Featured image not found", 404);
                 }
             }
         }
@@ -184,15 +117,9 @@ export async function PATCH(request, { params }) {
             });
 
             if (mediaCount !== updateData.images.length) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message:
-                            "One or more images were not found or inactive",
-                    },
-                    {
-                        status: 404,
-                    },
+                return apiError(
+                    "One or more images were not found or inactive",
+                    404,
                 );
             }
         }
@@ -204,29 +131,15 @@ export async function PATCH(request, { params }) {
             });
 
             if (categoryCount !== updateData.categories.length) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message:
-                            "One or more categories were not found or inactive",
-                    },
-                    {
-                        status: 404,
-                    },
+                return apiError(
+                    "One or more categories were not found or inactive",
+                    404,
                 );
             }
         }
 
         if (Object.keys(updateData).length === 0) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "No valid fields provided for update",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("No valid fields provided for update", 400);
         }
 
         const destination = await Destination.findByIdAndUpdate(
@@ -243,15 +156,7 @@ export async function PATCH(request, { params }) {
             .populate("author", "name email");
 
         if (!destination) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Destination not found", 404);
         }
 
         return NextResponse.json({
@@ -263,26 +168,18 @@ export async function PATCH(request, { params }) {
         console.error("PATCH admin destination error:", error);
 
         if (error.code === 11000) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination slug already exists",
-                },
-                {
-                    status: 409,
-                },
-            );
+            return apiError("Destination slug already exists", 409);
         }
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to update destination",
-            },
-            {
-                status: 500,
-            },
-        );
+        if (error.name === "ValidationError") {
+            const errors = Object.values(error.errors).map(
+                (err) => err.message,
+            );
+
+            return apiError("Validation failed", 400, errors);
+        }
+
+        return apiError("Failed to update destination", 500);
     }
 }
 
@@ -295,43 +192,19 @@ export async function DELETE(request, { params }) {
         const authorization = requireRole(session, [ROLES.ADMIN]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
         const { id } = await params;
 
         if (!mongoose.Types.ObjectId.isValid(id)) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Invalid destination ID",
-                },
-                {
-                    status: 400,
-                },
-            );
+            return apiError("Invalid destination ID", 400);
         }
 
         const destination = await Destination.findByIdAndDelete(id);
 
         if (!destination) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination not found",
-                },
-                {
-                    status: 404,
-                },
-            );
+            return apiError("Destination not found", 404);
         }
 
         return NextResponse.json({
@@ -344,14 +217,6 @@ export async function DELETE(request, { params }) {
     } catch (error) {
         console.error("DELETE admin destination error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to delete destination",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to delete destination", 500);
     }
 }

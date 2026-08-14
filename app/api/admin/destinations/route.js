@@ -11,26 +11,16 @@ import { ROLES } from "@/constants/roles";
 import { createDestinationSchema } from "@/lib/validation/destination";
 import { getValidationErrors } from "@/lib/validation/common";
 
+import { apiError } from "@/lib/api/error";
+
 export async function GET() {
     try {
         await connectDB();
-
         const session = await getSession();
-
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
-
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
-
         const destinations = await Destination.find()
             .populate("images")
             .populate("featuredImage")
@@ -38,65 +28,31 @@ export async function GET() {
             .populate("author", "name email")
             .sort({ createdAt: -1 })
             .lean();
-
-        return NextResponse.json({
-            success: true,
-            data: destinations,
-        });
+        return NextResponse.json({ success: true, data: destinations });
     } catch (error) {
         console.error("GET admin destinations error:", error);
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch destinations",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to fetch destinations", 500);
     }
 }
 
 export async function POST(request) {
     try {
         await connectDB();
-
         const session = await getSession();
-
         const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
-
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
-
         const body = await request.json();
-
         const validation = createDestinationSchema.safeParse(body);
-
         if (!validation.success) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Validation failed",
-                    errors: getValidationErrors(validation.error),
-                },
-                {
-                    status: 400,
-                },
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
             );
         }
-
         const data = validation.data;
-
         const {
             title,
             slug,
@@ -109,79 +65,44 @@ export async function POST(request) {
             status,
             categories,
         } = data;
-
         if (featuredImage !== undefined) {
             if (
                 featuredImage !== null &&
                 !mongoose.Types.ObjectId.isValid(featuredImage)
             ) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: "Invalid featured image ID",
-                    },
-                    {
-                        status: 400,
-                    },
-                );
+                return apiError("Invalid featured image ID", 400);
             }
-
             if (featuredImage) {
                 const mediaExists = await Media.exists({
                     _id: featuredImage,
                     isActive: true,
                 });
-
                 if (!mediaExists) {
-                    return NextResponse.json(
-                        {
-                            success: false,
-                            message: "Featured image not found",
-                        },
-                        {
-                            status: 404,
-                        },
-                    );
+                    return apiError("Featured image not found", 404);
                 }
             }
         }
-
-        if (data.images?.length > 0) {
+        if (images?.length > 0) {
             const mediaCount = await Media.countDocuments({
-                _id: { $in: data.images },
+                _id: { $in: images },
                 isActive: true,
             });
-
-            if (mediaCount !== data.images.length) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message:
-                            "One or more images were not found or inactive",
-                    },
-                    {
-                        status: 404,
-                    },
+            if (mediaCount !== images.length) {
+                return apiError(
+                    "One or more images were not found or inactive",
+                    404,
                 );
             }
         }
-
-        if (data.categories?.length > 0) {
+        if (categories?.length > 0) {
             const categoryCount = await Category.countDocuments({
-                _id: { $in: data.categories },
+                _id: { $in: categories },
                 isActive: true,
             });
-
-            if (categoryCount !== data.categories.length) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message:
-                            "One or more categories were not found or inactive",
-                    },
-                    {
-                        status: 404,
-                    },
+            if (categoryCount !== categories.length) {
+                return apiError(
+                    "One or more categories were not found or inactive",
+                    404,
                 );
             }
         }
@@ -198,40 +119,25 @@ export async function POST(request) {
             categories,
             author: session.userId,
         });
-
         return NextResponse.json(
             {
                 success: true,
                 message: "Destination created successfully",
                 data: destination,
             },
-            {
-                status: 201,
-            },
+            { status: 201 },
         );
     } catch (error) {
         console.error("POST admin destination error:", error);
-
         if (error.code === 11000) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Destination slug already exists",
-                },
-                {
-                    status: 409,
-                },
-            );
+            return apiError("Destination slug already exists", 409);
         }
-
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to create destination",
-            },
-            {
-                status: 500,
-            },
-        );
+        if (error.name === "ValidationError") {
+            const errors = Object.values(error.errors).map(
+                (err) => err.message,
+            );
+            return apiError("Validation failed", 400, errors);
+        }
+        return apiError("Failed to create destination", 500);
     }
 }
