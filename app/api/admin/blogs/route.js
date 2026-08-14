@@ -13,6 +13,10 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import { apiError } from "@/lib/api/error";
+
+import { getPaginationParams, createPaginationMeta } from "@/lib/pagination";
+
 export async function POST(request) {
     try {
         await connectDB();
@@ -144,49 +148,54 @@ export async function POST(request) {
     }
 }
 
-export async function GET() {
+export async function GET(request) {
     try {
         await connectDB();
 
         const session = await getSession();
 
-        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+        const authorization = requireRole(session, [
+            ROLES.ADMIN,
+            ROLES.EDITOR,
+            ROLES.AUTHOR,
+        ]);
 
         if (!authorization.authorized) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: authorization.message,
-                },
-                {
-                    status: authorization.status,
-                },
-            );
+            return apiError(authorization.message, authorization.status);
         }
 
-        const blogs = await Blog.find()
-            .populate("featuredImage")
-            .populate("category")
-            .populate("tags")
-            .populate("author", "name email")
-            .sort({ createdAt: -1 })
-            .lean();
+        const { searchParams } = new URL(request.url);
+
+        const { page, limit, skip } = getPaginationParams(searchParams);
+
+        const filter = {};
+
+        const [blogs, total] = await Promise.all([
+            Blog.find(filter)
+                .populate("featuredImage")
+                .populate("category")
+                .populate("tags")
+                .populate("author", "name email")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+
+            Blog.countDocuments(filter),
+        ]);
 
         return NextResponse.json({
             success: true,
             data: blogs,
+            pagination: createPaginationMeta({
+                page,
+                limit,
+                total,
+            }),
         });
     } catch (error) {
         console.error("GET admin blogs error:", error);
 
-        return NextResponse.json(
-            {
-                success: false,
-                message: "Failed to fetch blogs",
-            },
-            {
-                status: 500,
-            },
-        );
+        return apiError("Failed to fetch blogs", 500);
     }
 }

@@ -15,8 +15,9 @@ import { createDestinationSchema } from "@/lib/validation/destination";
 import { getValidationErrors } from "@/lib/validation/common";
 
 import { apiError } from "@/lib/api/error";
+import { getPaginationParams, createPaginationMeta } from "@/lib/pagination";
 
-export async function GET() {
+export async function GET(request) {
     try {
         await connectDB();
 
@@ -28,17 +29,34 @@ export async function GET() {
             return apiError(authorization.message, authorization.status);
         }
 
-        const destinations = await Destination.find()
-            .populate("images")
-            .populate("featuredImage")
-            .populate("categories")
-            .populate("author", "name email")
-            .sort({ createdAt: -1 })
-            .lean();
+        const { searchParams } = new URL(request.url);
+
+        const { page, limit, skip } = getPaginationParams(searchParams);
+
+        const [destinations, total] = await Promise.all([
+            Destination.find()
+                .populate("images")
+                .populate("featuredImage")
+                .populate("categories")
+                .populate("author", "name email")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+
+            Destination.countDocuments(),
+        ]);
+
+        const pagination = createPaginationMeta({
+            page,
+            limit,
+            total,
+        });
 
         return NextResponse.json({
             success: true,
             data: destinations,
+            pagination,
         });
     } catch (error) {
         console.error("GET admin destinations error:", error);

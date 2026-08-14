@@ -13,6 +13,7 @@ import { createCategorySchema } from "@/lib/validation/category";
 import { getValidationErrors } from "@/lib/validation/common";
 
 import { apiError } from "@/lib/api/error";
+import { getPaginationParams, createPaginationMeta } from "@/lib/pagination";
 
 export async function POST(request) {
     try {
@@ -97,7 +98,7 @@ export async function POST(request) {
     }
 }
 
-export async function GET() {
+export async function GET(request) {
     try {
         await connectDB();
 
@@ -109,14 +110,31 @@ export async function GET() {
             return apiError(authorization.message, authorization.status);
         }
 
-        const categories = await Category.find()
-            .populate("image")
-            .sort({ createdAt: -1 })
-            .lean();
+        const { searchParams } = new URL(request.url);
+
+        const { page, limit, skip } = getPaginationParams(searchParams);
+
+        const [categories, total] = await Promise.all([
+            Category.find()
+                .populate("image")
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean(),
+
+            Category.countDocuments(),
+        ]);
+
+        const pagination = createPaginationMeta({
+            page,
+            limit,
+            total,
+        });
 
         return NextResponse.json({
             success: true,
             data: categories,
+            pagination,
         });
     } catch (error) {
         console.error("GET admin categories error:", error);
