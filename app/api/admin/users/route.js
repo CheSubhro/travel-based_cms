@@ -8,6 +8,9 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import { createUserSchema } from "@/lib/validation/user";
+import { getValidationErrors } from "@/lib/validation/common";
+
 // GET /api/admin/users
 export async function GET() {
     try {
@@ -77,13 +80,14 @@ export async function POST(request) {
 
         const body = await request.json();
 
-        const { name, email, password, role, isActive } = body;
+        const validation = createUserSchema.safeParse(body);
 
-        if (!name || !email || !password) {
+        if (!validation.success) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "Name, email and password are required",
+                    message: "Validation failed",
+                    errors: getValidationErrors(validation.error),
                 },
                 {
                     status: 400,
@@ -91,10 +95,10 @@ export async function POST(request) {
             );
         }
 
-        const normalizedEmail = email.trim().toLowerCase();
+        const data = validation.data;
 
         const existingUser = await User.findOne({
-            email: normalizedEmail,
+            email: data.email,
         });
 
         if (existingUser) {
@@ -109,14 +113,14 @@ export async function POST(request) {
             );
         }
 
-        const hashedPassword = await hashPassword(password);
+        const hashedPassword = await hashPassword(data.password);
 
         const user = await User.create({
-            name,
-            email: normalizedEmail,
+            name: data.name,
+            email: data.email,
             password: hashedPassword,
-            role: role || ROLES.AUTHOR,
-            isActive: isActive !== undefined ? isActive : true,
+            role: data.role || ROLES.AUTHOR,
+            isActive: data.isActive ?? true,
         });
 
         return NextResponse.json(

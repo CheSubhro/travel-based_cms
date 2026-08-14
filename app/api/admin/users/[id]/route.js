@@ -9,6 +9,9 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import { updateUserSchema } from "@/lib/validation/user";
+import { getValidationErrors } from "@/lib/validation/common";
+
 // GET /api/admin/users/:id
 export async function GET(request, { params }) {
     try {
@@ -76,6 +79,7 @@ export async function GET(request, { params }) {
         );
     }
 }
+
 // PATCH /api/admin/users/:id
 export async function PATCH(request, { params }) {
     try {
@@ -125,21 +129,14 @@ export async function PATCH(request, { params }) {
 
         const body = await request.json();
 
-        const allowedFields = ["name", "email", "password", "role", "isActive"];
+        const validation = updateUserSchema.safeParse(body);
 
-        const updateData = {};
-
-        for (const field of allowedFields) {
-            if (body[field] !== undefined) {
-                updateData[field] = body[field];
-            }
-        }
-
-        if (Object.keys(updateData).length === 0) {
+        if (!validation.success) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "No valid fields provided for update",
+                    message: "Validation failed",
+                    errors: getValidationErrors(validation.error),
                 },
                 {
                     status: 400,
@@ -147,9 +144,9 @@ export async function PATCH(request, { params }) {
             );
         }
 
-        if (updateData.email !== undefined) {
-            updateData.email = updateData.email.trim().toLowerCase();
+        const updateData = validation.data;
 
+        if (updateData.email !== undefined) {
             const existingUser = await User.findOne({
                 email: updateData.email,
                 _id: { $ne: id },
@@ -169,18 +166,6 @@ export async function PATCH(request, { params }) {
         }
 
         if (updateData.password !== undefined) {
-            if (updateData.password.length < 6) {
-                return NextResponse.json(
-                    {
-                        success: false,
-                        message: "Password must be at least 6 characters",
-                    },
-                    {
-                        status: 400,
-                    },
-                );
-            }
-
             updateData.password = await hashPassword(updateData.password);
         }
 
@@ -251,6 +236,7 @@ export async function PATCH(request, { params }) {
         );
     }
 }
+
 // DELETE /api/admin/users/:id
 export async function DELETE(request, { params }) {
     try {
