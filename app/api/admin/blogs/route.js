@@ -252,6 +252,18 @@ export async function GET(request) {
                         $options: "i",
                     },
                 },
+                {
+                    slug: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+                {
+                    content: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
             ];
         }
 
@@ -273,14 +285,16 @@ export async function GET(request) {
             Blog.countDocuments(filter),
         ]);
 
+        const pagination = createPaginationMeta({
+            page,
+            limit,
+            total,
+        });
+
         return NextResponse.json({
             success: true,
             data: blogs,
-            pagination: createPaginationMeta({
-                page,
-                limit,
-                total,
-            }),
+            pagination,
             filters: {
                 status: status || null,
                 featured: featured !== null ? featured === "true" : null,
