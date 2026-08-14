@@ -10,6 +10,9 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import { createCategorySchema } from "@/lib/validation/category";
+import { getValidationErrors } from "@/lib/validation/common";
+
 export async function POST(request) {
     try {
         await connectDB();
@@ -32,11 +35,30 @@ export async function POST(request) {
 
         const body = await request.json();
 
-        const { name, slug, description, image, isActive } = body;
+        // Validate request body
+        const validation = createCategorySchema.safeParse(body);
+
+        if (!validation.success) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Validation failed",
+                    errors: getValidationErrors(validation.error),
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        // Use validated data only
+        const data = validation.data;
+
+        const { name, slug, description, image, isActive } = data;
 
         // Validate category image
-        if (image !== undefined) {
-            if (image !== null && !mongoose.Types.ObjectId.isValid(image)) {
+        if (image !== undefined && image !== null) {
+            if (!mongoose.Types.ObjectId.isValid(image)) {
                 return NextResponse.json(
                     {
                         success: false,
@@ -48,23 +70,21 @@ export async function POST(request) {
                 );
             }
 
-            if (image) {
-                const mediaExists = await Media.exists({
-                    _id: image,
-                    isActive: true,
-                });
+            const mediaExists = await Media.exists({
+                _id: image,
+                isActive: true,
+            });
 
-                if (!mediaExists) {
-                    return NextResponse.json(
-                        {
-                            success: false,
-                            message: "Category image not found",
-                        },
-                        {
-                            status: 404,
-                        },
-                    );
-                }
+            if (!mediaExists) {
+                return NextResponse.json(
+                    {
+                        success: false,
+                        message: "Category image not found",
+                    },
+                    {
+                        status: 404,
+                    },
+                );
             }
         }
 
