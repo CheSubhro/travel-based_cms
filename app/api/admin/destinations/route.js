@@ -30,11 +30,33 @@ export async function GET(request) {
         }
 
         const { searchParams } = new URL(request.url);
+
         const { page, limit, skip } = getPaginationParams(searchParams);
+
         const status = searchParams.get("status");
         const featured = searchParams.get("featured");
         const category = searchParams.get("category");
         const search = searchParams.get("search");
+
+        const sortBy = searchParams.get("sortBy") || "createdAt";
+        const sortOrder = searchParams.get("sortOrder") || "desc";
+
+        const allowedSortFields = [
+            "createdAt",
+            "updatedAt",
+            "title",
+            "location",
+        ];
+
+        const allowedSortOrders = ["asc", "desc"];
+
+        if (!allowedSortFields.includes(sortBy)) {
+            return apiError("Invalid sort field", 400);
+        }
+
+        if (!allowedSortOrders.includes(sortOrder)) {
+            return apiError("Invalid sort order", 400);
+        }
 
         const filter = {};
 
@@ -89,13 +111,17 @@ export async function GET(request) {
             ];
         }
 
+        const sort = {
+            [sortBy]: sortOrder === "asc" ? 1 : -1,
+        };
+
         const [destinations, total] = await Promise.all([
             Destination.find(filter)
                 .populate("images")
                 .populate("featuredImage")
                 .populate("categories")
                 .populate("author", "name email")
-                .sort({ createdAt: -1 })
+                .sort(sort)
                 .skip(skip)
                 .limit(limit)
                 .lean(),
@@ -118,6 +144,10 @@ export async function GET(request) {
                 featured: featured !== null ? featured === "true" : null,
                 category: category || null,
                 search: search?.trim() || null,
+            },
+            sorting: {
+                sortBy,
+                sortOrder,
             },
         });
     } catch (error) {

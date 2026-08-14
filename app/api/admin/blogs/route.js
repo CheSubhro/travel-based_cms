@@ -172,6 +172,26 @@ export async function GET(request) {
         const author = searchParams.get("author");
         const search = searchParams.get("search");
 
+        const sortBy = searchParams.get("sortBy") || "createdAt";
+        const sortOrder = searchParams.get("sortOrder") || "desc";
+
+        const allowedSortFields = [
+            "createdAt",
+            "updatedAt",
+            "title",
+            "publishedAt",
+        ];
+
+        const allowedSortOrders = ["asc", "desc"];
+
+        if (!allowedSortFields.includes(sortBy)) {
+            return apiError("Invalid sort field", 400);
+        }
+
+        if (!allowedSortOrders.includes(sortOrder)) {
+            return apiError("Invalid sort order", 400);
+        }
+
         const filter = {};
 
         if (status) {
@@ -215,6 +235,7 @@ export async function GET(request) {
 
             filter.author = author;
         }
+
         if (search?.trim()) {
             const searchTerm = search.trim();
 
@@ -233,13 +254,18 @@ export async function GET(request) {
                 },
             ];
         }
+
+        const sort = {
+            [sortBy]: sortOrder === "asc" ? 1 : -1,
+        };
+
         const [blogs, total] = await Promise.all([
             Blog.find(filter)
                 .populate("featuredImage")
                 .populate("category")
                 .populate("tags")
                 .populate("author", "name email")
-                .sort({ createdAt: -1 })
+                .sort(sort)
                 .skip(skip)
                 .limit(limit)
                 .lean(),
@@ -262,6 +288,10 @@ export async function GET(request) {
                 tag: tag || null,
                 author: author || null,
                 search: search?.trim() || null,
+            },
+            sorting: {
+                sortBy,
+                sortOrder,
             },
         });
     } catch (error) {
