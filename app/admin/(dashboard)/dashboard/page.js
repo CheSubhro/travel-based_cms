@@ -430,6 +430,67 @@ export default function DashboardPage() {
                     )}
                 </div>
             </div>
+
+            <div className="mt-8">
+                <h2 className="mb-4 text-lg font-semibold text-gray-900">
+                    Quick Actions
+                </h2>
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <a
+                        href="/admin/blogs/new"
+                        className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                    >
+                        <h3 className="text-sm font-semibold text-gray-900">
+                            Create Blog
+                        </h3>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Write and publish a new blog post
+                        </p>
+                    </a>
+
+                    <a
+                        href="/admin/destinations/new"
+                        className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                    >
+                        <h3 className="text-sm font-semibold text-gray-900">
+                            Add Destination
+                        </h3>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Create a new travel destination
+                        </p>
+                    </a>
+
+                    <a
+                        href="/admin/categories"
+                        className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                    >
+                        <h3 className="text-sm font-semibold text-gray-900">
+                            Manage Categories
+                        </h3>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Create and manage categories
+                        </p>
+                    </a>
+
+                    <a
+                        href="/admin/media"
+                        className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
+                    >
+                        <h3 className="text-sm font-semibold text-gray-900">
+                            Media Library
+                        </h3>
+
+                        <p className="mt-1 text-sm text-gray-500">
+                            Upload and manage images
+                        </p>
+                    </a>
+                </div>
+            </div>
+            
         </div>
     );
 }
