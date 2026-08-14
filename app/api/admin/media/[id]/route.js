@@ -7,6 +7,7 @@ import cloudinary from "@/lib/cloudinary";
 import Media from "@/models/Media";
 import Blog from "@/models/Blog";
 import Destination from "@/models/Destination";
+import Category from "@/models/Category";
 
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
@@ -34,6 +35,12 @@ export async function DELETE(request, { params }) {
 
         const { id } = await params;
 
+        /*
+         * -----------------------------------------
+         * Validate Media ID
+         * -----------------------------------------
+         */
+
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return NextResponse.json(
                 {
@@ -45,6 +52,12 @@ export async function DELETE(request, { params }) {
                 },
             );
         }
+
+        /*
+         * -----------------------------------------
+         * Find media
+         * -----------------------------------------
+         */
 
         const media = await Media.findById(id);
 
@@ -60,9 +73,21 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        // Check whether the media is being used by a Blog
+        /*
+         * -----------------------------------------
+         * Check Blog usage
+         * -----------------------------------------
+         */
+
         const blogUsingMedia = await Blog.exists({
-            $or: [{ featuredImage: media._id }, { images: media._id }],
+            $or: [
+                {
+                    featuredImage: media._id,
+                },
+                {
+                    images: media._id,
+                },
+            ],
         });
 
         if (blogUsingMedia) {
@@ -78,9 +103,21 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        // Check whether the media is being used by a Destination
+        /*
+         * -----------------------------------------
+         * Check Destination usage
+         * -----------------------------------------
+         */
+
         const destinationUsingMedia = await Destination.exists({
-            $or: [{ featuredImage: media._id }, { images: media._id }],
+            $or: [
+                {
+                    featuredImage: media._id,
+                },
+                {
+                    images: media._id,
+                },
+            ],
         });
 
         if (destinationUsingMedia) {
@@ -96,12 +133,45 @@ export async function DELETE(request, { params }) {
             );
         }
 
-        // Delete from Cloudinary
+        /*
+         * -----------------------------------------
+         * Check Category usage
+         * -----------------------------------------
+         */
+
+        const categoryUsingMedia = await Category.exists({
+            image: media._id,
+        });
+
+        if (categoryUsingMedia) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message:
+                        "This media is being used by a category and cannot be deleted",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
+
+        /*
+         * -----------------------------------------
+         * Delete from Cloudinary
+         * -----------------------------------------
+         */
+
         await cloudinary.uploader.destroy(media.publicId, {
             resource_type: media.resourceType || "image",
         });
 
-        // Delete from MongoDB
+        /*
+         * -----------------------------------------
+         * Delete from MongoDB
+         * -----------------------------------------
+         */
+
         await Media.findByIdAndDelete(media._id);
 
         return NextResponse.json({

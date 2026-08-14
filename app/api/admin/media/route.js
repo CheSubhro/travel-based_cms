@@ -9,6 +9,9 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import { createMediaSchema } from "@/lib/validation/media";
+import { getValidationErrors } from "@/lib/validation/common";
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -38,20 +41,42 @@ export async function POST(request) {
         const formData = await request.formData();
 
         const file = formData.get("file");
+
         const alt = formData.get("alt")?.toString().trim() || "";
+
         const caption = formData.get("caption")?.toString().trim() || "";
 
-        if (alt.length > 200) {
+        /*
+         * -----------------------------------------
+         * Validate metadata
+         * -----------------------------------------
+         */
+
+        const validation = createMediaSchema.safeParse({
+            alt,
+            caption,
+        });
+
+        if (!validation.success) {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "Alt text cannot exceed 200 characters",
+                    message: "Validation failed",
+                    errors: getValidationErrors(validation.error),
                 },
                 {
                     status: 400,
                 },
             );
         }
+
+        const data = validation.data;
+
+        /*
+         * -----------------------------------------
+         * Validate file exists
+         * -----------------------------------------
+         */
 
         if (!file || typeof file === "string") {
             return NextResponse.json(
@@ -65,6 +90,12 @@ export async function POST(request) {
             );
         }
 
+        /*
+         * -----------------------------------------
+         * Validate MIME type
+         * -----------------------------------------
+         */
+
         if (!ALLOWED_TYPES.includes(file.type)) {
             return NextResponse.json(
                 {
@@ -77,6 +108,12 @@ export async function POST(request) {
                 },
             );
         }
+
+        /*
+         * -----------------------------------------
+         * Validate file size
+         * -----------------------------------------
+         */
 
         if (file.size <= 0) {
             return NextResponse.json(
@@ -102,17 +139,11 @@ export async function POST(request) {
             );
         }
 
-        if (!alt) {
-            return NextResponse.json(
-                {
-                    success: false,
-                    message: "Alt text is required",
-                },
-                {
-                    status: 400,
-                },
-            );
-        }
+        /*
+         * -----------------------------------------
+         * Validate file extension
+         * -----------------------------------------
+         */
 
         const originalName = file.name.toLowerCase();
 
@@ -133,7 +164,19 @@ export async function POST(request) {
             );
         }
 
+        /*
+         * -----------------------------------------
+         * Convert file to buffer
+         * -----------------------------------------
+         */
+
         const buffer = Buffer.from(await file.arrayBuffer());
+
+        /*
+         * -----------------------------------------
+         * Upload to Cloudinary
+         * -----------------------------------------
+         */
 
         const uploadResult = await new Promise((resolve, reject) => {
             const uploadStream = cloudinary.uploader.upload_stream(
@@ -153,6 +196,12 @@ export async function POST(request) {
             uploadStream.end(buffer);
         });
 
+        /*
+         * -----------------------------------------
+         * Save media document
+         * -----------------------------------------
+         */
+
         const media = await Media.create({
             publicId: uploadResult.public_id,
             url: uploadResult.secure_url,
@@ -162,8 +211,8 @@ export async function POST(request) {
             height: uploadResult.height,
             bytes: uploadResult.bytes,
             originalName: file.name,
-            alt,
-            caption,
+            alt: data.alt,
+            caption: data.caption,
             folder: "travel-cms",
             uploadedBy: session.userId,
         });
@@ -180,6 +229,47 @@ export async function POST(request) {
         );
     } catch (error) {
         console.error("POST admin media error:", error);
+
+        /*
+         * -----------------------------------------
+         * Mongoose validation error
+         * -----------------------------------------
+         */
+
+        if (error.name === "ValidationError") {
+            const errors = Object.values(error.errors).map(
+                (err) => err.message,
+            );
+
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Media validation failed",
+                    errors,
+                },
+                {
+                    status: 400,
+                },
+            );
+        }
+
+        /*
+         * -----------------------------------------
+         * Duplicate publicId
+         * -----------------------------------------
+         */
+
+        if (error.code === 11000) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Media with this public ID already exists",
+                },
+                {
+                    status: 409,
+                },
+            );
+        }
 
         return NextResponse.json(
             {
