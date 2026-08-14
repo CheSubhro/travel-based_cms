@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import mongoose from "mongoose";
 
 import connectDB from "@/lib/mongodb";
 
@@ -10,7 +9,12 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
-import { createGallerySchema } from "@/lib/validation/gallery";
+import {
+    getGallerySchema,
+    createGallerySchema,
+    updateGallerySchema,
+    deleteGallerySchema,
+} from "@/lib/validation/gallery";
 
 import { getValidationErrors } from "@/lib/validation/common";
 
@@ -32,15 +36,21 @@ export async function GET(request) {
 
         const destinationId = searchParams.get("destinationId");
 
-        if (!destinationId) {
-            return apiError("Destination ID is required", 400);
+        const validation = getGallerySchema.safeParse({
+            destinationId,
+        });
+
+        if (!validation.success) {
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
+            );
         }
 
-        if (!mongoose.Types.ObjectId.isValid(destinationId)) {
-            return apiError("Invalid destination ID", 400);
-        }
+        const { destinationId: validatedDestinationId } = validation.data;
 
-        const destination = await Destination.findById(destinationId)
+        const destination = await Destination.findById(validatedDestinationId)
             .populate("images")
             .populate("featuredImage")
             .lean();
@@ -165,8 +175,8 @@ export async function PATCH(request) {
         }
 
         const body = await request.json();
-
-        const validation = createGallerySchema.safeParse(body);
+       
+        const validation = updateGallerySchema.safeParse(body);
 
         if (!validation.success) {
             return apiError(
@@ -177,7 +187,6 @@ export async function PATCH(request) {
         }
 
         const { destinationId, imageIds } = validation.data;
-
         const destination = await Destination.findById(destinationId);
 
         if (!destination) {
@@ -191,6 +200,15 @@ export async function PATCH(request) {
         if (currentImageIds.length !== imageIds.length) {
             return apiError(
                 "Reorder request must contain all existing gallery images",
+                400,
+            );
+        }
+
+        const uniqueImageIds = new Set(imageIds);
+
+        if (uniqueImageIds.size !== imageIds.length) {
+            return apiError(
+                "Reorder request cannot contain duplicate image IDs",
                 400,
             );
         }
@@ -254,26 +272,32 @@ export async function DELETE(request) {
 
         const imageId = searchParams.get("imageId");
 
-        if (!destinationId || !imageId) {
-            return apiError("Destination ID and image ID are required", 400);
+        const validation = deleteGallerySchema.safeParse({
+            destinationId,
+            imageId,
+        });
+
+        if (!validation.success) {
+            return apiError(
+                "Validation failed",
+                400,
+                getValidationErrors(validation.error),
+            );
         }
 
-        if (!mongoose.Types.ObjectId.isValid(destinationId)) {
-            return apiError("Invalid destination ID", 400);
-        }
+        const {
+            destinationId: validatedDestinationId,
+            imageId: validatedImageId,
+        } = validation.data;
 
-        if (!mongoose.Types.ObjectId.isValid(imageId)) {
-            return apiError("Invalid image ID", 400);
-        }
-
-        const destination = await Destination.findById(destinationId);
+        const destination = await Destination.findById(validatedDestinationId);
 
         if (!destination) {
             return apiError("Destination not found", 404);
         }
 
         const imageExists = destination.images.some(
-            (id) => id.toString() === imageId,
+            (id) => id.toString() === validatedImageId,
         );
 
         if (!imageExists) {
@@ -281,12 +305,14 @@ export async function DELETE(request) {
         }
 
         destination.images = destination.images.filter(
-            (id) => id.toString() !== imageId,
+            (id) => id.toString() !== validatedImageId,
         );
 
         await destination.save();
 
-        const updatedDestination = await Destination.findById(destinationId)
+        const updatedDestination = await Destination.findById(
+            validatedDestinationId,
+        )
             .populate("images")
             .populate("featuredImage")
             .lean();
