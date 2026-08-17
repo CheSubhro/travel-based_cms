@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import Toast from "@/components/admin/Toast";
 
 export default function CreateBlogPage() {
-    
+
     const [categories, setCategories] = useState([]);
     const [tags, setTags] = useState([]);
     const [media, setMedia] = useState([]);
@@ -498,16 +498,28 @@ export default function CreateBlogPage() {
                                 </div>
                             )}
 
-                            <div className="flex items-center">
-                                <label className="flex cursor-pointer items-center gap-3">
+                            <div className="flex items-end">
+                                <label
+                                    className={`flex w-full cursor-pointer items-center gap-3 rounded-lg border p-3 transition ${
+                                        formData.featured
+                                            ? "border-gray-900 bg-gray-50 ring-1 ring-gray-900"
+                                            : "border-gray-200 hover:bg-gray-50"
+                                    }`}
+                                >
                                     <input
                                         type="checkbox"
+                                        name="featured"
                                         checked={formData.featured}
-                                        onChange={handleFeaturedChange}
+                                        onChange={(event) =>
+                                            setFormData((previous) => ({
+                                                ...previous,
+                                                featured: event.target.checked,
+                                            }))
+                                        }
                                         className="h-4 w-4 rounded border-gray-300"
                                     />
 
-                                    <span className="text-sm font-medium text-gray-700">
+                                    <span className="text-sm text-gray-700">
                                         Featured Blog
                                     </span>
                                 </label>
