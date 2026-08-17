@@ -209,19 +209,25 @@ export default function BlogsPage() {
     };
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchCategories();
     }, []);
 
     useEffect(() => {
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         fetchBlogs();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [page, status, featured, category, sortBy, sortOrder]);
 
-    const handleSearch = (event) => {
+    const handleSearch = async (event) => {
         event.preventDefault();
 
-        setPage(1);
+        if (page !== 1) {
+            setPage(1);
+            return;
+        }
 
-        fetchBlogs();
+        await fetchBlogs();
     };
 
     const handleReset = () => {
@@ -747,13 +753,13 @@ export default function BlogsPage() {
                 <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 px-4">
                     <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
                         <h2 className="text-lg font-semibold text-gray-900">
-                            Delete Destination
+                            Delete Blog
                         </h2>
 
                         <p className="mt-2 text-sm leading-6 text-gray-600">
                             Are you sure you want to delete{" "}
                             <span className="font-semibold text-gray-900">
-                                "{deleteTitle}"
+                                &quot;{deleteTitle}&quot;
                             </span>
                             ?
                         </p>

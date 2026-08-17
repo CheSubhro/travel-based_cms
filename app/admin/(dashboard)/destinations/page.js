@@ -2,7 +2,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import {useEffect, useState } from "react";
 
 import Toast from "@/components/admin/Toast";
 
@@ -15,12 +15,13 @@ export default function DestinationsPage() {
     const [error, setError] = useState("");
 
     const [page, setPage] = useState(1);
-    const [limit] = useState(10);
+    const limit = 10;
 
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
 
     const [search, setSearch] = useState("");
+    const [appliedSearch, setAppliedSearch] = useState("");
     const [status, setStatus] = useState("");
     const [featured, setFeatured] = useState("");
     const [category, setCategory] = useState("");
@@ -51,105 +52,113 @@ export default function DestinationsPage() {
         });
     };
 
-    const fetchDestinations = async () => {
-        try {
-            setLoading(true);
-            setError("");
-
-            const params = new URLSearchParams();
-
-            params.set("page", page);
-            params.set("limit", limit);
-
-            if (search.trim()) {
-                params.set("search", search.trim());
-            }
-
-            if (status) {
-                params.set("status", status);
-            }
-
-            if (featured) {
-                params.set("featured", featured);
-            }
-
-            if (category) {
-                params.set("category", category);
-            }
-
-            params.set("sortBy", sortBy);
-            params.set("sortOrder", sortOrder);
-
-            const response = await fetch(
-                `/api/admin/destinations?${params.toString()}`,
-                {
-                    cache: "no-store",
-                },
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    result.message || "Failed to fetch destinations",
-                );
-            }
-
-            setDestinations(result.data);
-            setTotal(result.pagination.total);
-            setTotalPages(result.pagination.totalPages);
-        } catch (error) {
-            console.error("Fetch destinations error:", error);
-
-            setError(
-                error.message || "Failed to fetch destinations",
-            );
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const fetchCategories = async () => {
-        try {
-            const response = await fetch(
-                "/api/admin/categories?limit=100",
-                {
-                    cache: "no-store",
-                },
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    result.message || "Failed to fetch categories",
-                );
-            }
-
-            setCategories(result.data);
-        } catch (error) {
-            console.error("Fetch categories error:", error);
-        }
-    };
-
     useEffect(() => {
-        fetchCategories();
+        const loadCategories = async () => {
+            try {
+                const response = await fetch(
+                    "/api/admin/categories?limit=100",
+                    {
+                        cache: "no-store",
+                    },
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message || "Failed to fetch categories",
+                    );
+                }
+
+                setCategories(result.data || []);
+            } catch (error) {
+                console.error("Fetch categories error:", error);
+            }
+        };
+
+        loadCategories();
     }, []);
 
     useEffect(() => {
-        fetchDestinations();
-    }, [page, status, featured, category, sortBy, sortOrder]);
+        const loadDestinations = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const params = new URLSearchParams();
+
+                params.set("page", page);
+                params.set("limit", limit);
+
+                if (appliedSearch.trim()) {
+                    params.set("search", appliedSearch.trim());
+                }
+
+                if (status) {
+                    params.set("status", status);
+                }
+
+                if (featured) {
+                    params.set("featured", featured);
+                }
+
+                if (category) {
+                    params.set("category", category);
+                }
+
+                params.set("sortBy", sortBy);
+                params.set("sortOrder", sortOrder);
+
+                const response = await fetch(
+                    `/api/admin/destinations?${params.toString()}`,
+                    {
+                        cache: "no-store",
+                    },
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message || "Failed to fetch destinations",
+                    );
+                }
+
+                setDestinations(result.data || []);
+                setTotal(result.pagination?.total || 0);
+                setTotalPages(result.pagination?.totalPages || 1);
+            } catch (error) {
+                console.error("Fetch destinations error:", error);
+
+                setError(
+                    error.message || "Failed to fetch destinations",
+                );
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadDestinations();
+    }, [
+        page,
+        appliedSearch,
+        status,
+        featured,
+        category,
+        sortBy,
+        sortOrder,
+    ]);
 
     const handleSearch = (event) => {
         event.preventDefault();
 
         setPage(1);
-
-        fetchDestinations();
+        setAppliedSearch(search);
     };
 
     const handleReset = () => {
         setSearch("");
+        setAppliedSearch("");
         setStatus("");
         setFeatured("");
         setCategory("");
@@ -285,7 +294,6 @@ export default function DestinationsPage() {
 
             showToast("success", "Destination deleted successfully.");
 
-            await fetchDestinations();
         } catch (error) {
             console.error("Delete destination error:", error);
 
@@ -537,7 +545,7 @@ export default function DestinationsPage() {
                                                 </div>
                                             </td>
 
-                                            <td>
+                                            <td className="px-5 py-4">
                                                 {[
                                                     destination.location?.city,
                                                     destination.location?.state,
@@ -702,7 +710,7 @@ export default function DestinationsPage() {
                         <p className="mt-2 text-sm leading-6 text-gray-600">
                             Are you sure you want to delete{" "}
                             <span className="font-semibold text-gray-900">
-                                "{deleteTitle}"
+                                &quot;{deleteTitle}&quot;
                             </span>
                             ?
                         </p>

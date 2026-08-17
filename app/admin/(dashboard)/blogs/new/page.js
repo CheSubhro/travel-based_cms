@@ -1,11 +1,15 @@
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import Toast from "@/components/admin/Toast";
 
 export default function CreateBlogPage() {
+
+    const router = useRouter();
 
     const [categories, setCategories] = useState([]);
     const [tags, setTags] = useState([]);
@@ -142,60 +146,80 @@ export default function CreateBlogPage() {
         }));
     };
 
-    const fetchFormData = async () => {
-        try {
-            setLoadingData(true);
-
-            const [categoryResponse, tagResponse, mediaResponse] =
-                await Promise.all([
-                    fetch("/api/admin/categories?limit=100", {
-                        cache: "no-store",
-                    }),
-
-                    fetch("/api/admin/tags?limit=100", {
-                        cache: "no-store",
-                    }),
-
-                    fetch("/api/admin/media?limit=100", {
-                        cache: "no-store",
-                    }),
-                ]);
-
-            const categoryResult = await categoryResponse.json();
-            const tagResult = await tagResponse.json();
-            const mediaResult = await mediaResponse.json();
-
-            if (!categoryResponse.ok) {
-                throw new Error(
-                    categoryResult.message || "Failed to fetch categories",
-                );
-            }
-
-            if (!tagResponse.ok) {
-                throw new Error(tagResult.message || "Failed to fetch tags");
-            }
-
-            if (!mediaResponse.ok) {
-                throw new Error(mediaResult.message || "Failed to fetch media");
-            }
-
-            setCategories(categoryResult.data || []);
-            setTags(tagResult.data || []);
-            setMedia(mediaResult.data || []);
-        } catch (error) {
-            console.error("Fetch blog form data error:", error);
-
-            showToast(
-                "error",
-                error.message || "Failed to load blog form data",
-            );
-        } finally {
-            setLoadingData(false);
-        }
-    };
-
     useEffect(() => {
-        fetchFormData();
+        let cancelled = false;
+
+        const loadFormData = async () => {
+            try {
+                setLoadingData(true);
+
+                const [categoryResponse, tagResponse, mediaResponse] =
+                    await Promise.all([
+                        fetch("/api/admin/categories?limit=100", {
+                            cache: "no-store",
+                        }),
+
+                        fetch("/api/admin/tags?limit=100", {
+                            cache: "no-store",
+                        }),
+
+                        fetch("/api/admin/media?limit=100", {
+                            cache: "no-store",
+                        }),
+                    ]);
+
+                const categoryResult = await categoryResponse.json();
+                const tagResult = await tagResponse.json();
+                const mediaResult = await mediaResponse.json();
+
+                if (!categoryResponse.ok) {
+                    throw new Error(
+                        categoryResult.message || "Failed to fetch categories",
+                    );
+                }
+
+                if (!tagResponse.ok) {
+                    throw new Error(
+                        tagResult.message || "Failed to fetch tags",
+                    );
+                }
+
+                if (!mediaResponse.ok) {
+                    throw new Error(
+                        mediaResult.message || "Failed to fetch media",
+                    );
+                }
+
+                if (cancelled) {
+                    return;
+                }
+
+                setCategories(categoryResult.data || []);
+                setTags(tagResult.data || []);
+                setMedia(mediaResult.data || []);
+            } catch (error) {
+                if (cancelled) {
+                    return;
+                }
+
+                console.error("Fetch blog form data error:", error);
+
+                showToast(
+                    "error",
+                    error.message || "Failed to load blog form data",
+                );
+            } finally {
+                if (!cancelled) {
+                    setLoadingData(false);
+                }
+            }
+        };
+
+        loadFormData();
+
+        return () => {
+            cancelled = true;
+        };
     }, []);
 
     const handleSubmit = async (event) => {
@@ -255,8 +279,8 @@ export default function CreateBlogPage() {
             }
 
             showToast("success", "Blog created successfully.");
-
-            window.location.href = "/admin/blogs";
+            
+            router.push("/admin/blogs");
         } catch (error) {
             console.error("Create blog error:", error);
 

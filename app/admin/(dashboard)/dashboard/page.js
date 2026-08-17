@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import DashboardCard from "../../components/DashboardCard";
@@ -293,12 +294,12 @@ export default function DashboardPage() {
                         Recent Blogs
                     </h2>
 
-                    <a
+                    <Link
                         href="/admin/blogs"
                         className="text-sm font-medium text-gray-600 hover:text-gray-900"
                     >
                         View all
-                    </a>
+                    </Link>
                 </div>
 
                 <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -353,12 +354,12 @@ export default function DashboardPage() {
                         Recent Destinations
                     </h2>
 
-                    <a
+                    <Link
                         href="/admin/destinations"
                         className="text-sm font-medium text-gray-600 hover:text-gray-900"
                     >
                         View all
-                    </a>
+                    </Link>
                 </div>
 
                 <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
@@ -437,7 +438,7 @@ export default function DashboardPage() {
                 </h2>
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <a
+                    <Link
                         href="/admin/blogs/new"
                         className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                     >
@@ -448,9 +449,9 @@ export default function DashboardPage() {
                         <p className="mt-1 text-sm text-gray-500">
                             Write and publish a new blog post
                         </p>
-                    </a>
+                    </Link>
 
-                    <a
+                    <Link
                         href="/admin/destinations/new"
                         className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                     >
@@ -461,9 +462,9 @@ export default function DashboardPage() {
                         <p className="mt-1 text-sm text-gray-500">
                             Create a new travel destination
                         </p>
-                    </a>
+                    </Link>
 
-                    <a
+                    <Link
                         href="/admin/categories"
                         className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                     >
@@ -474,9 +475,9 @@ export default function DashboardPage() {
                         <p className="mt-1 text-sm text-gray-500">
                             Create and manage categories
                         </p>
-                    </a>
+                    </Link>
 
-                    <a
+                    <Link
                         href="/admin/media"
                         className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-gray-300 hover:shadow-md"
                     >
@@ -487,10 +488,9 @@ export default function DashboardPage() {
                         <p className="mt-1 text-sm text-gray-500">
                             Upload and manage images
                         </p>
-                    </a>
+                    </Link>
                 </div>
             </div>
-            
         </div>
     );
 }

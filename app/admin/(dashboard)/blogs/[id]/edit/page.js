@@ -166,12 +166,23 @@ export default function EditBlogPage() {
         return localDate.toISOString().slice(0, 16);
     };
 
-    const fetchData = async () => {
-        try {
-            setLoadingData(true);
+    useEffect(() => {
+        if (!blogId) {
+            return;
+        }
 
-            const [blogResponse, categoryResponse, tagResponse, mediaResponse] =
-                await Promise.all([
+        let cancelled = false;
+
+        const loadData = async () => {
+            try {
+                setLoadingData(true);
+
+                const [
+                    blogResponse,
+                    categoryResponse,
+                    tagResponse,
+                    mediaResponse,
+                ] = await Promise.all([
                     fetch(`/api/admin/blogs/${blogId}`, {
                         cache: "no-store",
                     }),
@@ -189,92 +200,94 @@ export default function EditBlogPage() {
                     }),
                 ]);
 
-            const blogResult = await blogResponse.json();
-            const categoryResult = await categoryResponse.json();
-            const tagResult = await tagResponse.json();
-            const mediaResult = await mediaResponse.json();
+                const blogResult = await blogResponse.json();
+                const categoryResult = await categoryResponse.json();
+                const tagResult = await tagResponse.json();
+                const mediaResult = await mediaResponse.json();
 
-            if (!blogResponse.ok) {
-                throw new Error(
-                    blogResult.message || "Failed to fetch blog",
-                );
-            }
+                if (!blogResponse.ok) {
+                    throw new Error(
+                        blogResult.message || "Failed to fetch blog",
+                    );
+                }
 
-            if (!categoryResponse.ok) {
-                throw new Error(
-                    categoryResult.message || "Failed to fetch categories",
-                );
-            }
+                if (!categoryResponse.ok) {
+                    throw new Error(
+                        categoryResult.message || "Failed to fetch categories",
+                    );
+                }
 
-            if (!tagResponse.ok) {
-                throw new Error(
-                    tagResult.message || "Failed to fetch tags",
-                );
-            }
+                if (!tagResponse.ok) {
+                    throw new Error(
+                        tagResult.message || "Failed to fetch tags",
+                    );
+                }
 
-            if (!mediaResponse.ok) {
-                throw new Error(
-                    mediaResult.message || "Failed to fetch media",
-                );
-            }
+                if (!mediaResponse.ok) {
+                    throw new Error(
+                        mediaResult.message || "Failed to fetch media",
+                    );
+                }
 
-            const blog = blogResult.data;
+                if (cancelled) {
+                    return;
+                }
 
-            setCategories(categoryResult.data || []);
-            setTags(tagResult.data || []);
-            setMedia(mediaResult.data || []);
+                const blog = blogResult.data;
 
-            setFormData({
-                title: blog.title || "",
-                slug: blog.slug || "",
-                excerpt: blog.excerpt || "",
-                content: blog.content || "",
+                setCategories(categoryResult.data || []);
+                setTags(tagResult.data || []);
+                setMedia(mediaResult.data || []);
 
-                featuredImage:
-                    blog.featuredImage?._id ||
-                    blog.featuredImage ||
-                    "",
+                setFormData({
+                    title: blog.title || "",
+                    slug: blog.slug || "",
+                    excerpt: blog.excerpt || "",
+                    content: blog.content || "",
 
-                category:
-                    blog.category?._id ||
-                    blog.category ||
-                    "",
+                    featuredImage:
+                        blog.featuredImage?._id || blog.featuredImage || "",
 
-                tags: Array.isArray(blog.tags)
-                    ? blog.tags.map((item) => item?._id || item)
-                    : [],
+                    category: blog.category?._id || blog.category || "",
 
-                status: blog.status || "draft",
-
-                featured: Boolean(blog.featured),
-
-                publishedAt: formatPublishedAt(blog.publishedAt),
-
-                seo: {
-                    metaTitle: blog.seo?.metaTitle || "",
-                    metaDescription:
-                        blog.seo?.metaDescription || "",
-                    keywords: Array.isArray(blog.seo?.keywords)
-                        ? blog.seo.keywords
+                    tags: Array.isArray(blog.tags)
+                        ? blog.tags.map((item) => item?._id || item)
                         : [],
-                },
-            });
-        } catch (error) {
-            console.error("Fetch edit blog data error:", error);
 
-            showToast(
-                "error",
-                error.message || "Failed to load blog",
-            );
-        } finally {
-            setLoadingData(false);
-        }
-    };
+                    status: blog.status || "draft",
 
-    useEffect(() => {
-        if (blogId) {
-            fetchData();
-        }
+                    featured: Boolean(blog.featured),
+
+                    publishedAt: formatPublishedAt(blog.publishedAt),
+
+                    seo: {
+                        metaTitle: blog.seo?.metaTitle || "",
+                        metaDescription: blog.seo?.metaDescription || "",
+                        keywords: Array.isArray(blog.seo?.keywords)
+                            ? blog.seo.keywords
+                            : [],
+                    },
+                });
+            } catch (error) {
+                if (cancelled) {
+                    return;
+                }
+
+                console.error("Fetch edit blog data error:", error);
+
+                showToast("error", error.message || "Failed to load blog");
+            } finally {
+                if (!cancelled) {
+                    setLoadingData(false);
+                }
+            }
+        };
+
+        loadData();
+
+        return () => {
+            cancelled = true;
+        };
     }, [blogId]);
 
     const handleSubmit = async (event) => {
