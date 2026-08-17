@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import Toast from "@/components/admin/Toast";
 
 export default function DestinationsPage() {
+
     const [destinations, setDestinations] = useState([]);
     const [categories, setCategories] = useState([]);
 
@@ -155,6 +156,48 @@ export default function DestinationsPage() {
         setSortBy("createdAt");
         setSortOrder("desc");
         setPage(1);
+    };
+
+    const handleStatusChange = async (destinationId, newStatus) => {
+        try {
+            setError("");
+
+            const response = await fetch(
+                `/api/admin/destinations/${destinationId}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        status: newStatus,
+                    }),
+                },
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to update destination status",
+                );
+            }
+
+            setDestinations((previous) =>
+                previous.map((destination) =>
+                    destination._id === destinationId
+                        ? {
+                              ...destination,
+                              status: result.data.status,
+                          }
+                        : destination,
+                ),
+            );
+        } catch (error) {
+            console.error("Update destination status error:", error);
+
+            setError(error.message || "Failed to update destination status");
+        }
     };
 
     const openDeleteModal = (destination) => {
@@ -488,19 +531,34 @@ export default function DestinationsPage() {
                                             </td>
 
                                             <td className="px-5 py-4">
-                                                <span
-                                                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                                                <select
+                                                    value={destination.status}
+                                                    onChange={(event) =>
+                                                        handleStatusChange(
+                                                            destination._id,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className={`rounded-full border px-3 py-1.5 text-xs font-medium outline-none transition ${
                                                         destination.status ===
                                                         "published"
-                                                            ? "bg-green-100 text-green-700"
+                                                            ? "border-green-200 bg-green-100 text-green-700"
                                                             : destination.status ===
                                                                 "draft"
-                                                              ? "bg-yellow-100 text-yellow-700"
-                                                              : "bg-gray-100 text-gray-700"
+                                                              ? "border-yellow-200 bg-yellow-100 text-yellow-700"
+                                                              : "border-gray-200 bg-gray-100 text-gray-700"
                                                     }`}
                                                 >
-                                                    {destination.status}
-                                                </span>
+                                                    <option value="draft">
+                                                        Draft
+                                                    </option>
+                                                    <option value="published">
+                                                        Published
+                                                    </option>
+                                                    <option value="archived">
+                                                        Archived
+                                                    </option>
+                                                </select>
                                             </td>
 
                                             <td className="px-5 py-4">
