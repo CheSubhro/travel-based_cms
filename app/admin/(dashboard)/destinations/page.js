@@ -459,6 +459,12 @@ export default function DestinationsPage() {
                                         <td className="px-5 py-4">
                                             <div className="flex justify-end gap-3">
                                                 <Link
+                                                    href={`/admin/destinations/${destination._id}`}
+                                                    className="text-sm font-medium text-gray-700 hover:text-gray-900"
+                                                >
+                                                    View
+                                                </Link>
+                                                <Link
                                                     href={`/admin/destinations/${destination._id}/edit`}
                                                     className="text-sm font-medium text-gray-700 hover:text-gray-900"
                                                 >
