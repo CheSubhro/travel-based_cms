@@ -200,6 +200,48 @@ export default function DestinationsPage() {
         }
     };
 
+    const handleFeaturedChange = async (destinationId, featured) => {
+        try {
+            setError("");
+
+            const response = await fetch(
+                `/api/admin/destinations/${destinationId}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        featured,
+                    }),
+                },
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to update featured status",
+                );
+            }
+
+            setDestinations((previous) =>
+                previous.map((destination) =>
+                    destination._id === destinationId
+                        ? {
+                              ...destination,
+                              featured: result.data.featured,
+                          }
+                        : destination,
+                ),
+            );
+        } catch (error) {
+            console.error("Update featured status error:", error);
+
+            setError(error.message || "Failed to update featured status");
+        }
+    };
+
     const openDeleteModal = (destination) => {
         setDeleteId(destination._id);
         setDeleteTitle(destination.title);
@@ -562,15 +604,24 @@ export default function DestinationsPage() {
                                             </td>
 
                                             <td className="px-5 py-4">
-                                                {destination.featured ? (
-                                                    <span className="text-sm font-medium text-gray-900">
-                                                        Yes
-                                                    </span>
-                                                ) : (
-                                                    <span className="text-sm text-gray-400">
-                                                        No
-                                                    </span>
-                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleFeaturedChange(
+                                                            destination._id,
+                                                            !destination.featured,
+                                                        )
+                                                    }
+                                                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                                                        destination.featured
+                                                            ? "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
+                                                            : "border-gray-200 bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                                    }`}
+                                                >
+                                                    {destination.featured
+                                                        ? "Featured"
+                                                        : "Not Featured"}
+                                                </button>
                                             </td>
 
                                             <td className="px-5 py-4">
