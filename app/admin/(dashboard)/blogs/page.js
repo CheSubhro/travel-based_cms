@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -101,6 +102,47 @@ export default function BlogsPage() {
             setError(error.message || "Failed to fetch blogs");
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleStatusChange = async (blogId, newStatus) => {
+        try {
+            setError("");
+
+            const response = await fetch(`/api/admin/blogs/${blogId}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    status: newStatus,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to update blog status",
+                );
+            }
+
+            setBlogs((previous) =>
+                previous.map((blog) =>
+                    blog._id === blogId
+                        ? {
+                              ...blog,
+                              status: result.data.status,
+                          }
+                        : blog,
+                ),
+            );
+
+            showToast("success", "Blog status updated successfully.");
+        } catch (error) {
+            console.error("Update blog status error:", error);
+
+            showToast("error", error.message || "Failed to update blog status");
         }
     };
 
@@ -532,13 +574,36 @@ export default function BlogsPage() {
 
                                             {/* Status */}
                                             <td className="px-5 py-4">
-                                                <span
-                                                    className={`rounded-full border px-3 py-1.5 text-xs font-medium ${getStatusClass(
-                                                        blog.status,
-                                                    )}`}
+                                                <select
+                                                    value={blog.status}
+                                                    onChange={(event) =>
+                                                        handleStatusChange(
+                                                            blog._id,
+                                                            event.target.value,
+                                                        )
+                                                    }
+                                                    className={`rounded-full border px-3 py-1.5 text-xs font-medium outline-none transition ${
+                                                        blog.status ===
+                                                        "published"
+                                                            ? "border-green-200 bg-green-100 text-green-700"
+                                                            : blog.status ===
+                                                                "draft"
+                                                              ? "border-yellow-200 bg-yellow-100 text-yellow-700"
+                                                              : "border-gray-200 bg-gray-100 text-gray-700"
+                                                    }`}
                                                 >
-                                                    {blog.status}
-                                                </span>
+                                                    <option value="draft">
+                                                        Draft
+                                                    </option>
+
+                                                    <option value="published">
+                                                        Published
+                                                    </option>
+
+                                                    <option value="archived">
+                                                        Archived
+                                                    </option>
+                                                </select>
                                             </td>
 
                                             {/* Featured */}
