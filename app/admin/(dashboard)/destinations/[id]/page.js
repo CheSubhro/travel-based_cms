@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useParams } from "next/navigation";
 
 export default function ViewDestinationPage() {
+    
     const params = useParams();
 
     const destinationId = params.id;
