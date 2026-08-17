@@ -149,7 +149,7 @@ export async function PATCH(request, { params }) {
             id,
             updateData,
             {
-                new: true,
+                returnDocument: "after",
                 runValidators: true,
             },
         )
