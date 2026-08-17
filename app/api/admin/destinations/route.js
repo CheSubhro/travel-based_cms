@@ -6,6 +6,7 @@ import connectDB from "@/lib/mongodb";
 import Destination from "@/models/Destination";
 import Media from "@/models/Media";
 import Category from "@/models/Category";
+import User from "@/models/User";
 
 import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
