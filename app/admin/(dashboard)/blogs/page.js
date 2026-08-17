@@ -146,6 +146,50 @@ export default function BlogsPage() {
         }
     };
 
+    const handleFeaturedChange = async (blogId, featured) => {
+        try {
+            setError("");
+
+            const response = await fetch(`/api/admin/blogs/${blogId}`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    featured,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to update featured status",
+                );
+            }
+
+            setBlogs((previous) =>
+                previous.map((blog) =>
+                    blog._id === blogId
+                        ? {
+                              ...blog,
+                              featured: result.data.featured,
+                          }
+                        : blog,
+                ),
+            );
+
+            showToast("success", "Featured status updated successfully.");
+        } catch (error) {
+            console.error("Update blog featured status error:", error);
+
+            showToast(
+                "error",
+                error.message || "Failed to update featured status",
+            );
+        }
+    };
+
     const fetchCategories = async () => {
         try {
             const response = await fetch("/api/admin/categories?limit=100", {
@@ -608,15 +652,24 @@ export default function BlogsPage() {
 
                                             {/* Featured */}
                                             <td className="px-5 py-4">
-                                                {blog.featured ? (
-                                                    <span className="rounded-full border border-green-200 bg-green-100 px-3 py-1.5 text-xs font-medium text-green-700">
-                                                        Featured
-                                                    </span>
-                                                ) : (
-                                                    <span className="rounded-full border border-gray-200 bg-gray-100 px-3 py-1.5 text-xs font-medium text-gray-500">
-                                                        Not Featured
-                                                    </span>
-                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleFeaturedChange(
+                                                            blog._id,
+                                                            !blog.featured,
+                                                        )
+                                                    }
+                                                    className={`rounded-full border px-3 py-1.5 text-xs font-medium transition ${
+                                                        blog.featured
+                                                            ? "border-green-200 bg-green-100 text-green-700 hover:bg-green-200"
+                                                            : "border-gray-200 bg-gray-100 text-gray-500 hover:bg-gray-200"
+                                                    }`}
+                                                >
+                                                    {blog.featured
+                                                        ? "Featured"
+                                                        : "Not Featured"}
+                                                </button>
                                             </td>
 
                                             {/* Actions */}
