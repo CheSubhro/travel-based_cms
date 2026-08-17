@@ -11,6 +11,8 @@ import { ROLES } from "@/constants/roles";
 
 import { apiError } from "@/lib/api/error";
 
+import { getPaginationParams, createPaginationMeta } from "@/lib/pagination";
+
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 
 const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp"];
@@ -138,5 +140,114 @@ export async function POST(request) {
         }
 
         return apiError("Failed to upload image", 500);
+    }
+}
+
+export async function GET(request) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
+        if (!authorization.authorized) {
+            return apiError(authorization.message, authorization.status);
+        }
+
+        const { searchParams } = new URL(request.url);
+
+        const { page, limit, skip } = getPaginationParams(searchParams);
+
+        const search = searchParams.get("search");
+        const isActive = searchParams.get("isActive");
+
+        const sortBy = searchParams.get("sortBy") || "createdAt";
+        const sortOrder = searchParams.get("sortOrder") || "desc";
+
+        const allowedSortFields = [
+            "createdAt",
+            "updatedAt",
+            "originalName",
+            "format",
+            "bytes",
+        ];
+
+        const allowedSortOrders = ["asc", "desc"];
+
+        if (!allowedSortFields.includes(sortBy)) {
+            return apiError("Invalid sort field", 400);
+        }
+
+        if (!allowedSortOrders.includes(sortOrder)) {
+            return apiError("Invalid sort order", 400);
+        }
+
+        const filter = {};
+
+        if (isActive !== null) {
+            if (isActive !== "true" && isActive !== "false") {
+                return apiError("isActive must be true or false", 400);
+            }
+
+            filter.isActive = isActive === "true";
+        }
+
+        if (search?.trim()) {
+            const searchTerm = search.trim();
+
+            filter.$or = [
+                {
+                    originalName: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+                {
+                    alt: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+                {
+                    caption: {
+                        $regex: searchTerm,
+                        $options: "i",
+                    },
+                },
+            ];
+        }
+
+        const sort = {
+            [sortBy]: sortOrder === "asc" ? 1 : -1,
+        };
+
+        const [media, total] = await Promise.all([
+            Media.find(filter).sort(sort).skip(skip).limit(limit).lean(),
+
+            Media.countDocuments(filter),
+        ]);
+
+        return NextResponse.json({
+            success: true,
+            data: media,
+            pagination: createPaginationMeta({
+                page,
+                limit,
+                total,
+            }),
+            filters: {
+                search: search?.trim() || null,
+                isActive: isActive !== null ? isActive === "true" : null,
+            },
+            sorting: {
+                sortBy,
+                sortOrder,
+            },
+        });
+    } catch (error) {
+        console.error("GET admin media error:", error);
+
+        return apiError("Failed to fetch media", 500);
     }
 }
