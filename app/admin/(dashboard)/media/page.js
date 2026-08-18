@@ -140,6 +140,10 @@ export default function MediaPage() {
                                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
                                         Uploaded
                                     </th>
+
+                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Actions
+                                    </th>
                                 </tr>
                             </thead>
 
@@ -247,6 +251,15 @@ export default function MediaPage() {
                                                       )
                                                     : "—"}
                                             </span>
+                                        </td>
+
+                                        <td className="px-5 py-4">
+                                            <Link
+                                                href={`/admin/media/${item._id}/edit`}
+                                                className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
+                                            >
+                                                Edit
+                                            </Link>
                                         </td>
                                     </tr>
                                 ))}

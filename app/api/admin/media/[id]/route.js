@@ -153,3 +153,88 @@ export async function GET(request, { params }) {
     }
 }
 
+export async function PATCH(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN]);
+
+        if (!authorization.authorized) {
+            return apiError(authorization.message, authorization.status);
+        }
+
+        const { id } = await params;
+
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return apiError("Invalid media ID", 400);
+        }
+
+        const body = await request.json();
+
+        const alt = typeof body.alt === "string" ? body.alt.trim() : undefined;
+
+        const caption =
+            typeof body.caption === "string" ? body.caption.trim() : undefined;
+
+        const isActive =
+            typeof body.isActive === "boolean" ? body.isActive : undefined;
+
+        if (alt !== undefined && !alt) {
+            return apiError("Alt text is required", 400);
+        }
+
+        if (alt !== undefined && alt.length > 200) {
+            return apiError("Alt text cannot exceed 200 characters", 400);
+        }
+
+        if (caption !== undefined && caption.length > 500) {
+            return apiError("Caption cannot exceed 500 characters", 400);
+        }
+
+        const updateData = {};
+
+        if (alt !== undefined) {
+            updateData.alt = alt;
+        }
+
+        if (caption !== undefined) {
+            updateData.caption = caption;
+        }
+
+        if (isActive !== undefined) {
+            updateData.isActive = isActive;
+        }
+
+        if (Object.keys(updateData).length === 0) {
+            return apiError("No valid fields to update", 400);
+        }
+
+        const media = await Media.findByIdAndUpdate(id, updateData, {
+            new: true,
+            runValidators: true,
+        })
+            .populate("uploadedBy", "name email")
+            .lean();
+
+        if (!media) {
+            return apiError("Media not found", 404);
+        }
+
+        return NextResponse.json({
+            success: true,
+            message: "Media updated successfully",
+            data: media,
+        });
+    } catch (error) {
+        console.error("PATCH admin media error:", error);
+
+        if (error.name === "ValidationError") {
+            return apiError(error.message, 400);
+        }
+
+        return apiError("Failed to update media", 500);
+    }
+}
+
