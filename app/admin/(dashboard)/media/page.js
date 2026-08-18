@@ -74,6 +74,71 @@ export default function MediaPage() {
         return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     };
 
+    const handleToggleStatus = async (id) => {
+        try {
+            setError("");
+
+            const response = await fetch(`/api/admin/media/${id}`, {
+                method: "PATCH",
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to update media status",
+                );
+            }
+
+            setMedia((previous) =>
+                previous.map((item) =>
+                    item._id === id
+                        ? {
+                              ...item,
+                              isActive: result.data.isActive,
+                          }
+                        : item,
+                ),
+            );
+        } catch (error) {
+            console.error("Toggle media status error:", error);
+
+            setError(error.message || "Failed to update media status");
+        }
+    };
+
+    const handleDeleteMedia = async (id) => {
+        const confirmed = window.confirm(
+            "Are you sure you want to delete this media?",
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setError("");
+
+            const response = await fetch(`/api/admin/media/${id}`, {
+                method: "DELETE",
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || "Failed to delete media");
+            }
+
+            setMedia((previous) => previous.filter((item) => item._id !== id));
+
+            setTotal((previous) => Math.max(previous - 1, 0));
+        } catch (error) {
+            console.error("Delete media error:", error);
+
+            setError(error.message || "Failed to delete media");
+        }
+    };
+
     return (
         <div>
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -223,17 +288,21 @@ export default function MediaPage() {
                                         </td>
 
                                         <td className="px-5 py-4">
-                                            <span
-                                                className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleToggleStatus(item._id)
+                                                }
+                                                className={`rounded-full px-3 py-1.5 text-xs font-medium transition ${
                                                     item.isActive
-                                                        ? "bg-green-100 text-green-700"
-                                                        : "bg-gray-100 text-gray-600"
+                                                        ? "bg-green-100 text-green-700 hover:bg-green-200"
+                                                        : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                                                 }`}
                                             >
                                                 {item.isActive
                                                     ? "Active"
                                                     : "Inactive"}
-                                            </span>
+                                            </button>
                                         </td>
 
                                         <td className="px-5 py-4">
@@ -254,12 +323,26 @@ export default function MediaPage() {
                                         </td>
 
                                         <td className="px-5 py-4">
-                                            <Link
-                                                href={`/admin/media/${item._id}/edit`}
-                                                className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
-                                            >
-                                                Edit
-                                            </Link>
+                                            <div className="flex items-center gap-3">
+                                                <Link
+                                                    href={`/admin/media/${item._id}/edit`}
+                                                    className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
+                                                >
+                                                    Edit
+                                                </Link>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleDeleteMedia(
+                                                            item._id,
+                                                        )
+                                                    }
+                                                    className="text-sm font-medium text-red-600 transition hover:text-red-700"
+                                                >
+                                                    Delete
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
