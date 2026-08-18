@@ -9,6 +9,7 @@ import Toast from "@/components/admin/Toast";
 export default function CategoriesPage() {
     
     const [categories, setCategories] = useState([]);
+    const [role, setRole] = useState("");
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -71,6 +72,7 @@ export default function CategoriesPage() {
                 setCategories(result.data || []);
                 setTotal(result.pagination?.total || 0);
                 setTotalPages(result.pagination?.totalPages || 1);
+                setRole(result.role || "");
             } catch (error) {
                 console.error("Fetch categories error:", error);
 
@@ -268,9 +270,7 @@ export default function CategoriesPage() {
                                                                 category.image
                                                                     .url
                                                             }
-                                                            alt={
-                                                                category.name
-                                                            }
+                                                            alt={category.name}
                                                             className="h-10 w-10 rounded-lg object-cover"
                                                         />
                                                     ) : (
@@ -343,17 +343,19 @@ export default function CategoriesPage() {
                                                         Edit
                                                     </Link>
 
-                                                    <button
-                                                        type="button"
-                                                        onClick={() =>
-                                                            openDeleteModal(
-                                                                category,
-                                                            )
-                                                        }
-                                                        className="text-sm font-medium text-red-600 hover:text-red-700"
-                                                    >
-                                                        Delete
-                                                    </button>
+                                                    {role === "admin" && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() =>
+                                                                openDeleteModal(
+                                                                    category,
+                                                                )
+                                                            }
+                                                            className="text-sm font-medium text-red-600 hover:text-red-700"
+                                                        >
+                                                            Delete
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>

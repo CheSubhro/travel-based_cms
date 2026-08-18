@@ -135,6 +135,7 @@ export async function GET(request) {
             success: true,
             data: categories,
             pagination,
+            role: session.role,
         });
     } catch (error) {
         console.error("GET admin categories error:", error);
