@@ -143,137 +143,212 @@ export default function UploadMediaPage() {
                 onClose={closeToast}
             />
 
-            <div>
-                <div className="mb-6">
-                    <Link
-                        href="/admin/media"
-                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
-                    >
-                        ← Back to Media
-                    </Link>
-
-                    <div className="mt-4">
-                        <h1 className="text-2xl font-bold text-gray-900">
+            <div className="w-full space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl font-semibold text-gray-900">
                             Upload Media
                         </h1>
 
                         <p className="mt-1 text-sm text-gray-500">
-                            Upload an image to your media library
+                            Upload a new image to your media library.
                         </p>
                     </div>
+
+                    <Link
+                        href="/admin/media"
+                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                    >
+                        Back to Media
+                    </Link>
                 </div>
 
                 {error && (
-                    <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                         {error}
                     </div>
                 )}
 
-                <div className="max-w-2xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label
-                                htmlFor="media-file"
-                                className="mb-2 block text-sm font-medium text-gray-700"
-                            >
-                                Image
-                            </label>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Image Upload */}
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <h2 className="mb-5 text-lg font-semibold text-gray-900">
+                            Image Upload
+                        </h2>
 
-                            <input
-                                id="media-file"
-                                type="file"
-                                accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
-                                onChange={handleFileChange}
-                                disabled={uploading}
-                                className="block w-full rounded-lg border border-gray-300 bg-white text-sm text-gray-700 file:mr-4 file:border-0 file:bg-gray-100 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
-                            />
+                        <div className="space-y-5">
+                            <div>
+                                <label
+                                    htmlFor="media-file"
+                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                >
+                                    Image
+                                </label>
 
-                            <p className="mt-2 text-xs text-gray-500">
-                                JPG, JPEG, PNG or WebP. Maximum size: 5MB.
-                            </p>
+                                <input
+                                    id="media-file"
+                                    type="file"
+                                    accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp"
+                                    onChange={handleFileChange}
+                                    disabled={uploading}
+                                    className="block w-full rounded-lg border border-gray-300 bg-white text-sm text-gray-700 file:mr-4 file:border-0 file:bg-gray-100 file:px-4 file:py-2.5 file:text-sm file:font-medium file:text-gray-700 hover:file:bg-gray-200 disabled:cursor-not-allowed disabled:opacity-50"
+                                />
+
+                                <p className="mt-2 text-xs text-gray-500">
+                                    JPG, JPEG, PNG or WebP. Maximum file size:
+                                    5MB.
+                                </p>
+                            </div>
 
                             {file && (
-                                <div className="mt-3 rounded-lg bg-gray-50 p-3">
-                                    <p className="text-sm font-medium text-gray-700">
-                                        {file.name}
-                                    </p>
+                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                    <div className="flex items-center gap-4">
+                                        <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-gray-200">
+                                            <img
+                                                src={URL.createObjectURL(file)}
+                                                alt="Selected preview"
+                                                className="h-full w-full object-cover"
+                                            />
+                                        </div>
 
-                                    <p className="mt-1 text-xs text-gray-500">
-                                        {(file.size / (1024 * 1024)).toFixed(2)}{" "}
-                                        MB
-                                    </p>
+                                        <div className="min-w-0">
+                                            <p className="truncate text-sm font-medium text-gray-900">
+                                                {file.name}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                {(
+                                                    file.size /
+                                                    (1024 * 1024)
+                                                ).toFixed(2)}{" "}
+                                                MB
+                                            </p>
+                                        </div>
+                                    </div>
                                 </div>
                             )}
                         </div>
+                    </div>
 
-                        <div>
-                            <label
-                                htmlFor="alt"
-                                className="mb-2 block text-sm font-medium text-gray-700"
-                            >
-                                Alt Text
-                            </label>
+                    {/* Media Information */}
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <h2 className="mb-5 text-lg font-semibold text-gray-900">
+                            Media Information
+                        </h2>
 
-                            <input
-                                id="alt"
-                                type="text"
-                                value={alt}
-                                onChange={(event) => setAlt(event.target.value)}
-                                maxLength={200}
-                                disabled={uploading}
-                                placeholder="Describe the image"
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                            />
+                        <div className="grid gap-5">
+                            <div>
+                                <label
+                                    htmlFor="alt"
+                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                >
+                                    Alt Text
+                                </label>
 
-                            <p className="mt-2 text-xs text-gray-500">
-                                Required. Maximum 200 characters.
-                            </p>
+                                <input
+                                    id="alt"
+                                    type="text"
+                                    value={alt}
+                                    onChange={(event) =>
+                                        setAlt(event.target.value)
+                                    }
+                                    maxLength={200}
+                                    disabled={uploading}
+                                    required
+                                    placeholder="Describe the image"
+                                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                />
+
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Required. Maximum 200 characters.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label
+                                    htmlFor="caption"
+                                    className="mb-2 block text-sm font-medium text-gray-700"
+                                >
+                                    Caption
+                                </label>
+
+                                <textarea
+                                    id="caption"
+                                    value={caption}
+                                    onChange={(event) =>
+                                        setCaption(event.target.value)
+                                    }
+                                    maxLength={500}
+                                    rows={5}
+                                    disabled={uploading}
+                                    placeholder="Optional image caption"
+                                    className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm outline-none transition focus:border-gray-900 focus:ring-1 focus:ring-gray-900 disabled:cursor-not-allowed disabled:bg-gray-100"
+                                />
+
+                                <p className="mt-2 text-xs text-gray-500">
+                                    Optional. Maximum 500 characters.
+                                </p>
+                            </div>
                         </div>
+                    </div>
 
-                        <div>
-                            <label
-                                htmlFor="caption"
-                                className="mb-2 block text-sm font-medium text-gray-700"
-                            >
-                                Caption
-                            </label>
+                    {/* Upload Information */}
+                    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                        <h2 className="mb-5 text-lg font-semibold text-gray-900">
+                            Upload Information
+                        </h2>
 
-                            <textarea
-                                id="caption"
-                                value={caption}
-                                onChange={(event) =>
-                                    setCaption(event.target.value)
-                                }
-                                maxLength={500}
-                                rows={4}
-                                disabled={uploading}
-                                placeholder="Optional image caption"
-                                className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                            />
+                        <div className="grid gap-5 md:grid-cols-3">
+                            <div className="rounded-lg bg-gray-50 p-4">
+                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                    Allowed Types
+                                </p>
 
-                            <p className="mt-2 text-xs text-gray-500">
-                                Optional. Maximum 500 characters.
-                            </p>
+                                <p className="mt-2 text-sm font-medium text-gray-900">
+                                    JPG, JPEG, PNG, WebP
+                                </p>
+                            </div>
+
+                            <div className="rounded-lg bg-gray-50 p-4">
+                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                    Maximum Size
+                                </p>
+
+                                <p className="mt-2 text-sm font-medium text-gray-900">
+                                    5 MB
+                                </p>
+                            </div>
+
+                            <div className="rounded-lg bg-gray-50 p-4">
+                                <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                                    Storage
+                                </p>
+
+                                <p className="mt-2 text-sm font-medium text-gray-900">
+                                    Cloudinary
+                                </p>
+                            </div>
                         </div>
+                    </div>
 
-                        <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
-                            <Link
-                                href="/admin/media"
-                                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                            >
-                                Cancel
-                            </Link>
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-3">
+                        <Link
+                            href="/admin/media"
+                            className="rounded-lg border border-gray-300 px-5 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                        >
+                            Cancel
+                        </Link>
 
-                            <button
-                                type="submit"
-                                disabled={uploading}
-                                className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
-                            >
-                                {uploading ? "Uploading..." : "Upload Media"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
+                        <button
+                            type="submit"
+                            disabled={uploading}
+                            className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {uploading ? "Uploading..." : "Upload Media"}
+                        </button>
+                    </div>
+                </form>
             </div>
         </>
     );
