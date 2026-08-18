@@ -111,3 +111,45 @@ export async function DELETE(request, { params }) {
         return apiError("Failed to delete media", 500);
     }
 }
+
+export async function GET(request, { params }) {
+    try {
+        await connectDB();
+
+        const session = await getSession();
+
+        const authorization = requireRole(session, [ROLES.ADMIN, ROLES.EDITOR]);
+
+        if (!authorization.authorized) {
+            return apiError(authorization.message, authorization.status);
+        }
+
+        const { id } = await params;
+
+        if (!id) {
+            return apiError("Media ID is required", 400);
+        }
+
+        const media = await Media.findById(id)
+            .populate("uploadedBy", "name email")
+            .lean();
+
+        if (!media) {
+            return apiError("Media not found", 404);
+        }
+
+        return NextResponse.json({
+            success: true,
+            data: media,
+        });
+    } catch (error) {
+        console.error("GET admin media by ID error:", error);
+
+        if (error.name === "CastError") {
+            return apiError("Invalid media ID", 400);
+        }
+
+        return apiError("Failed to fetch media", 500);
+    }
+}
+
