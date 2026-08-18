@@ -8,6 +8,7 @@ import {
     FiEdit3,
     FiMapPin,
     FiFolder,
+    FiImage,
     FiSettings,
 } from "react-icons/fi";
 
@@ -31,6 +32,11 @@ const menuItems = [
         label: "Categories",
         href: "/admin/categories",
         icon: FiFolder,
+    },
+    {
+        label: "Media",
+        href: "/admin/media",
+        icon: FiImage,
     },
     {
         label: "Settings",
