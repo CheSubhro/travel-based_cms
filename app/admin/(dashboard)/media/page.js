@@ -19,6 +19,9 @@ export default function MediaPage() {
 
     const [previewImage, setPreviewImage] = useState(null);
 
+    const [deleteMedia, setDeleteMedia] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+
     const loadMedia = async () => {
         try {
             setLoading(true);
@@ -107,21 +110,21 @@ export default function MediaPage() {
         }
     };
 
-    const handleDeleteMedia = async (id) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this media?",
-        );
-
-        if (!confirmed) {
+    const handleDeleteMedia = async () => {
+        if (!deleteMedia) {
             return;
         }
 
         try {
+            setDeleting(true);
             setError("");
 
-            const response = await fetch(`/api/admin/media/${id}`, {
-                method: "DELETE",
-            });
+            const response = await fetch(
+                `/api/admin/media/${deleteMedia._id}`,
+                {
+                    method: "DELETE",
+                },
+            );
 
             const result = await response.json();
 
@@ -129,13 +132,19 @@ export default function MediaPage() {
                 throw new Error(result.message || "Failed to delete media");
             }
 
-            setMedia((previous) => previous.filter((item) => item._id !== id));
+            setMedia((previous) =>
+                previous.filter((item) => item._id !== deleteMedia._id),
+            );
 
             setTotal((previous) => Math.max(previous - 1, 0));
+
+            setDeleteMedia(null);
         } catch (error) {
             console.error("Delete media error:", error);
 
             setError(error.message || "Failed to delete media");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -334,9 +343,7 @@ export default function MediaPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        handleDeleteMedia(
-                                                            item._id,
-                                                        )
+                                                        setDeleteMedia(item)
                                                     }
                                                     className="text-sm font-medium text-red-600 transition hover:text-red-700"
                                                 >
@@ -419,6 +426,63 @@ export default function MediaPage() {
                                     {previewImage.alt}
                                 </p>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {deleteMedia && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4"
+                    onClick={() => {
+                        if (!deleting) {
+                            setDeleteMedia(null);
+                        }
+                    }}
+                >
+                    <div
+                        className="w-full max-w-md rounded-xl bg-white p-6 shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <h2 className="text-lg font-semibold text-gray-900">
+                            Delete Media
+                        </h2>
+
+                        <p className="mt-2 text-sm leading-6 text-gray-500">
+                            Are you sure you want to delete this media? This
+                            action cannot be undone.
+                        </p>
+
+                        <div className="mt-4 rounded-lg bg-gray-50 p-3">
+                            <p className="truncate text-sm font-medium text-gray-900">
+                                {deleteMedia.originalName || "Untitled"}
+                            </p>
+
+                            {deleteMedia.alt && (
+                                <p className="mt-1 truncate text-xs text-gray-500">
+                                    {deleteMedia.alt}
+                                </p>
+                            )}
+                        </div>
+
+                        <div className="mt-6 flex justify-end gap-3">
+                            <button
+                                type="button"
+                                onClick={() => setDeleteMedia(null)}
+                                disabled={deleting}
+                                className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+
+                            <button
+                                type="button"
+                                onClick={handleDeleteMedia}
+                                disabled={deleting}
+                                className="rounded-lg bg-red-600 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                {deleting ? "Deleting..." : "Delete"}
+                            </button>
                         </div>
                     </div>
                 </div>
