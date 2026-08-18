@@ -17,6 +17,8 @@ export default function MediaPage() {
     const [totalPages, setTotalPages] = useState(1);
     const [total, setTotal] = useState(0);
 
+    const [previewImage, setPreviewImage] = useState(null);
+
     const loadMedia = async () => {
         try {
             setLoading(true);
@@ -150,15 +152,25 @@ export default function MediaPage() {
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-3">
                                                 {item.url ? (
-                                                    <img
-                                                        src={item.url}
-                                                        alt={
-                                                            item.alt ||
-                                                            item.originalName ||
-                                                            "Media"
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            setPreviewImage(
+                                                                item,
+                                                            )
                                                         }
-                                                        className="h-12 w-12 rounded-lg object-cover"
-                                                    />
+                                                        className="h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100"
+                                                    >
+                                                        <img
+                                                            src={item.url}
+                                                            alt={
+                                                                item.alt ||
+                                                                item.originalName ||
+                                                                "Media"
+                                                            }
+                                                            className="h-full w-full object-cover transition hover:scale-105"
+                                                        />
+                                                    </button>
                                                 ) : (
                                                     <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xs font-medium text-gray-400">
                                                         No
@@ -268,6 +280,50 @@ export default function MediaPage() {
                         >
                             Next
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4"
+                    onClick={() => setPreviewImage(null)}
+                >
+                    <div
+                        className="relative w-full max-w-4xl rounded-xl bg-white p-4 shadow-2xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={() => setPreviewImage(null)}
+                            className="absolute right-4 top-4 z-10 flex h-9 w-9 items-center justify-center rounded-full bg-gray-900 text-lg text-white transition hover:bg-gray-700"
+                        >
+                            ×
+                        </button>
+
+                        <div className="flex max-h-[75vh] items-center justify-center overflow-hidden rounded-lg bg-gray-100">
+                            <img
+                                src={previewImage.url}
+                                alt={
+                                    previewImage.alt ||
+                                    previewImage.originalName ||
+                                    "Media preview"
+                                }
+                                className="max-h-[75vh] max-w-full object-contain"
+                            />
+                        </div>
+
+                        <div className="mt-4">
+                            <p className="truncate text-sm font-medium text-gray-900">
+                                {previewImage.originalName || "Untitled"}
+                            </p>
+
+                            {previewImage.alt && (
+                                <p className="mt-1 text-sm text-gray-500">
+                                    {previewImage.alt}
+                                </p>
+                            )}
+                        </div>
                     </div>
                 </div>
             )}
