@@ -9,6 +9,7 @@ import {
     FiMapPin,
     FiFolder,
     FiImage,
+    FiGrid,
     FiSettings,
 } from "react-icons/fi";
 
@@ -37,6 +38,11 @@ const menuItems = [
         label: "Media",
         href: "/admin/media",
         icon: FiImage,
+    },
+    {
+        label: "Gallery",
+        href: "/admin/gallery",
+        icon: FiGrid,
     },
     {
         label: "Settings",
