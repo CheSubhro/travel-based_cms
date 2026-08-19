@@ -5,7 +5,6 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function ViewDestinationGalleryPage() {
-    
     const params = useParams();
     const destinationId = params?.destinationId;
 
@@ -19,6 +18,8 @@ export default function ViewDestinationGalleryPage() {
     const [showMedia, setShowMedia] = useState(false);
     const [selectedImages, setSelectedImages] = useState([]);
 
+    const [previewImage, setPreviewImage] = useState(null);
+
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
 
@@ -29,6 +30,22 @@ export default function ViewDestinationGalleryPage() {
 
         fetchDestination();
     }, [destinationId]);
+
+    useEffect(() => {
+        const handleEscape = (event) => {
+            if (event.key === "Escape") {
+                setPreviewImage(null);
+            }
+        };
+
+        if (previewImage) {
+            document.addEventListener("keydown", handleEscape);
+        }
+
+        return () => {
+            document.removeEventListener("keydown", handleEscape);
+        };
+    }, [previewImage]);
 
     const fetchDestination = async () => {
         try {
@@ -165,6 +182,15 @@ export default function ViewDestinationGalleryPage() {
         } finally {
             setSaving(false);
         }
+    };
+
+    const handleCloseMedia = () => {
+        setShowMedia(false);
+        setSelectedImages([]);
+    };
+
+    const handleClosePreview = () => {
+        setPreviewImage(null);
     };
 
     if (loading) {
@@ -312,15 +338,29 @@ export default function ViewDestinationGalleryPage() {
                     </div>
 
                     <div className="p-5">
-                        <img
-                            src={featuredImage.url}
-                            alt={
-                                featuredImage.alt ||
-                                destination.title ||
-                                "Cover image"
+                        <button
+                            type="button"
+                            onClick={() =>
+                                setPreviewImage({
+                                    url: featuredImage.url,
+                                    alt:
+                                        featuredImage.alt ||
+                                        destination.title ||
+                                        "Cover image",
+                                })
                             }
-                            className="h-64 w-full rounded-xl object-cover"
-                        />
+                            className="block w-full cursor-zoom-in"
+                        >
+                            <img
+                                src={featuredImage.url}
+                                alt={
+                                    featuredImage.alt ||
+                                    destination.title ||
+                                    "Cover image"
+                                }
+                                className="h-64 w-full rounded-xl object-cover transition duration-200 hover:opacity-90"
+                            />
+                        </button>
                     </div>
                 </div>
             )}
@@ -364,33 +404,40 @@ export default function ViewDestinationGalleryPage() {
                                 }`;
 
                             return (
-                                <div
+                                <button
+                                    type="button"
                                     key={image?._id || index}
-                                    className="overflow-hidden rounded-xl border border-gray-200 bg-gray-50"
+                                    onClick={() =>
+                                        imageUrl &&
+                                        setPreviewImage({
+                                            url: imageUrl,
+                                            alt: imageAlt,
+                                        })
+                                    }
+                                    className="group overflow-hidden rounded-xl border border-gray-200 bg-gray-50 text-left"
                                 >
                                     {imageUrl ? (
                                         <img
                                             src={imageUrl}
                                             alt={imageAlt}
-                                            className="aspect-square w-full object-cover"
+                                            className="aspect-square w-full cursor-zoom-in object-cover transition duration-300 group-hover:scale-105"
                                         />
                                     ) : (
                                         <div className="flex aspect-square items-center justify-center text-xs text-gray-400">
                                             Image unavailable
                                         </div>
                                     )}
-                                </div>
+                                </button>
                             );
                         })}
                     </div>
                 )}
             </div>
 
-            {/* Media Selection */}
+            {/* Media Selection Modal */}
             {showMedia && (
                 <div className="fixed inset-0 z-50 overflow-y-auto bg-black/50 p-4">
                     <div className="mx-auto mt-10 max-w-6xl rounded-xl bg-white shadow-xl">
-                        {/* Modal Header */}
                         <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
                             <div>
                                 <h2 className="text-lg font-semibold text-gray-900">
@@ -405,17 +452,13 @@ export default function ViewDestinationGalleryPage() {
 
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setShowMedia(false);
-                                    setSelectedImages([]);
-                                }}
+                                onClick={handleCloseMedia}
                                 className="text-2xl leading-none text-gray-400 transition hover:text-gray-700"
                             >
                                 ×
                             </button>
                         </div>
 
-                        {/* Modal Content */}
                         <div className="max-h-[65vh] overflow-y-auto p-5">
                             {mediaLoading ? (
                                 <div className="p-10 text-center">
@@ -496,7 +539,6 @@ export default function ViewDestinationGalleryPage() {
                             )}
                         </div>
 
-                        {/* Modal Footer */}
                         <div className="flex flex-col gap-3 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
                             <p className="text-sm text-gray-500">
                                 {selectedImages.length}{" "}
@@ -509,10 +551,7 @@ export default function ViewDestinationGalleryPage() {
                             <div className="flex gap-3">
                                 <button
                                     type="button"
-                                    onClick={() => {
-                                        setShowMedia(false);
-                                        setSelectedImages([]);
-                                    }}
+                                    onClick={handleCloseMedia}
                                     className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
                                 >
                                     Cancel
@@ -532,6 +571,40 @@ export default function ViewDestinationGalleryPage() {
                                 </button>
                             </div>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Image Preview Modal */}
+            {previewImage && (
+                <div
+                    className="fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4"
+                    onClick={handleClosePreview}
+                >
+                    <div
+                        className="relative max-h-[95vh] max-w-6xl"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <button
+                            type="button"
+                            onClick={handleClosePreview}
+                            aria-label="Close image preview"
+                            className="absolute right-2 top-2 z-10 flex h-10 w-10 items-center justify-center rounded-full bg-black/70 text-2xl text-white transition hover:bg-black"
+                        >
+                            ×
+                        </button>
+
+                        <img
+                            src={previewImage.url}
+                            alt={previewImage.alt}
+                            className="max-h-[90vh] max-w-full rounded-lg object-contain shadow-2xl"
+                        />
+
+                        {previewImage.alt && (
+                            <p className="mt-3 text-center text-sm text-white">
+                                {previewImage.alt}
+                            </p>
+                        )}
                     </div>
                 </div>
             )}
