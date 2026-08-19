@@ -10,6 +10,7 @@ import {
     FiFolder,
     FiImage,
     FiGrid,
+    FiTag,
     FiSettings,
 } from "react-icons/fi";
 
@@ -43,6 +44,11 @@ const menuItems = [
         label: "Gallery",
         href: "/admin/galleries",
         icon: FiGrid,
+    },
+    {
+        label: "Tags",
+        href: "/admin/tags",
+        icon: FiTag,
     },
     {
         label: "Settings",
