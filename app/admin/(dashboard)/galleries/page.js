@@ -1,10 +1,14 @@
+
+
 "use client";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export default function GalleriesPage() {
+    
     const [destinations, setDestinations] = useState([]);
+    const [selectedDestination, setSelectedDestination] = useState("");
 
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
@@ -38,6 +42,12 @@ export default function GalleriesPage() {
         loadGalleries();
     }, []);
 
+    const filteredDestinations = selectedDestination
+        ? destinations.filter(
+              (destination) => destination._id === selectedDestination
+          )
+        : destinations;
+
     return (
         <div>
             <div className="mb-6">
@@ -58,6 +68,32 @@ export default function GalleriesPage() {
                 </div>
             )}
 
+            <div className="mb-6 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <label
+                    htmlFor="destination"
+                    className="mb-2 block text-sm font-medium text-gray-700"
+                >
+                    Select Destination
+                </label>
+
+                <select
+                    id="destination"
+                    value={selectedDestination}
+                    onChange={(event) =>
+                        setSelectedDestination(event.target.value)
+                    }
+                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                >
+                    <option value="">All destinations</option>
+
+                    {destinations.map((destination) => (
+                        <option key={destination._id} value={destination._id}>
+                            {destination.title}
+                        </option>
+                    ))}
+                </select>
+            </div>
+
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
                 {loading ? (
                     <div className="p-10 text-center text-sm text-gray-500">
@@ -67,6 +103,12 @@ export default function GalleriesPage() {
                     <div className="p-10 text-center">
                         <p className="text-sm text-gray-500">
                             No galleries found.
+                        </p>
+                    </div>
+                ) : filteredDestinations.length === 0 ? (
+                    <div className="p-10 text-center">
+                        <p className="text-sm text-gray-500">
+                            No gallery found for this destination.
                         </p>
                     </div>
                 ) : (
@@ -97,7 +139,7 @@ export default function GalleriesPage() {
                             </thead>
 
                             <tbody className="divide-y divide-gray-200">
-                                {destinations.map((destination) => {
+                                {filteredDestinations.map((destination) => {
                                     const imageCount =
                                         destination.images?.length || 0;
 
@@ -186,3 +228,4 @@ export default function GalleriesPage() {
         </div>
     );
 }
+
