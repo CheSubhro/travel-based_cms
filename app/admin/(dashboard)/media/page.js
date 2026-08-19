@@ -22,42 +22,42 @@ export default function MediaPage() {
     const [deleteMedia, setDeleteMedia] = useState(null);
     const [deleting, setDeleting] = useState(false);
 
-    const loadMedia = async () => {
-        try {
-            setLoading(true);
-            setError("");
-
-            const params = new URLSearchParams();
-
-            params.set("page", page);
-            params.set("limit", limit);
-
-            const response = await fetch(
-                `/api/admin/media?${params.toString()}`,
-                {
-                    cache: "no-store",
-                },
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || "Failed to fetch media");
-            }
-
-            setMedia(result.data || []);
-            setTotal(result.pagination?.total || 0);
-            setTotalPages(result.pagination?.totalPages || 1);
-        } catch (error) {
-            console.error("Fetch media error:", error);
-
-            setError(error.message || "Failed to fetch media");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const loadMedia = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const params = new URLSearchParams();
+
+                params.set("page", page);
+                params.set("limit", limit);
+
+                const response = await fetch(
+                    `/api/admin/media?${params.toString()}`,
+                    {
+                        cache: "no-store",
+                    },
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Failed to fetch media");
+                }
+
+                setMedia(result.data || []);
+                setTotal(result.pagination?.total || 0);
+                setTotalPages(result.pagination?.totalPages || 1);
+            } catch (error) {
+                console.error("Fetch media error:", error);
+
+                setError(error.message || "Failed to fetch media");
+            } finally {
+                setLoading(false);
+            }
+        };
+
         loadMedia();
     }, [page]);
 
