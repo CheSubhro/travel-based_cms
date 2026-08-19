@@ -41,7 +41,7 @@ const menuItems = [
     },
     {
         label: "Gallery",
-        href: "/admin/gallery",
+        href: "/admin/galleries",
         icon: FiGrid,
     },
     {

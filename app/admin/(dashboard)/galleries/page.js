@@ -1,0 +1,188 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect, useState } from "react";
+
+export default function GalleriesPage() {
+    const [destinations, setDestinations] = useState([]);
+
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState("");
+
+    const loadGalleries = async () => {
+        try {
+            setLoading(true);
+            setError("");
+
+            const response = await fetch("/api/admin/destinations", {
+                cache: "no-store",
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || "Failed to fetch galleries");
+            }
+
+            setDestinations(result.data || []);
+        } catch (error) {
+            console.error("Fetch galleries error:", error);
+
+            setError(error.message || "Failed to fetch galleries");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        loadGalleries();
+    }, []);
+
+    return (
+        <div>
+            <div className="mb-6">
+                <div>
+                    <h1 className="text-2xl font-bold text-gray-900">
+                        Galleries
+                    </h1>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                        Manage destination galleries
+                    </p>
+                </div>
+            </div>
+
+            {error && (
+                <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    {error}
+                </div>
+            )}
+
+            <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+                {loading ? (
+                    <div className="p-10 text-center text-sm text-gray-500">
+                        Loading galleries...
+                    </div>
+                ) : destinations.length === 0 ? (
+                    <div className="p-10 text-center">
+                        <p className="text-sm text-gray-500">
+                            No galleries found.
+                        </p>
+                    </div>
+                ) : (
+                    <div className="overflow-x-auto">
+                        <table className="w-full min-w-[900px]">
+                            <thead className="border-b border-gray-200 bg-gray-50">
+                                <tr>
+                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Destination
+                                    </th>
+
+                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Cover Image
+                                    </th>
+
+                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Images
+                                    </th>
+
+                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Status
+                                    </th>
+
+                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
+                                        Actions
+                                    </th>
+                                </tr>
+                            </thead>
+
+                            <tbody className="divide-y divide-gray-200">
+                                {destinations.map((destination) => {
+                                    const imageCount =
+                                        destination.images?.length || 0;
+
+                                    const featuredImage =
+                                        destination.featuredImage;
+
+                                    return (
+                                        <tr
+                                            key={destination._id}
+                                            className="transition hover:bg-gray-50"
+                                        >
+                                            <td className="px-5 py-4">
+                                                <div>
+                                                    <p className="font-medium text-gray-900">
+                                                        {destination.title ||
+                                                            "Untitled"}
+                                                    </p>
+
+                                                    {destination.slug && (
+                                                        <p className="mt-1 text-xs text-gray-500">
+                                                            {destination.slug}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                {featuredImage?.url ? (
+                                                    <img
+                                                        src={featuredImage.url}
+                                                        alt={
+                                                            featuredImage.alt ||
+                                                            destination.title ||
+                                                            "Gallery"
+                                                        }
+                                                        className="h-12 w-12 rounded-lg object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-gray-100 text-xs font-medium text-gray-400">
+                                                        No
+                                                    </div>
+                                                )}
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                <span className="text-sm text-gray-600">
+                                                    {imageCount}{" "}
+                                                    {imageCount === 1
+                                                        ? "image"
+                                                        : "images"}
+                                                </span>
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                <span
+                                                    className={`rounded-full px-3 py-1.5 text-xs font-medium ${
+                                                        destination.status ===
+                                                        "published"
+                                                            ? "bg-green-100 text-green-700"
+                                                            : destination.status ===
+                                                                "draft"
+                                                              ? "bg-yellow-100 text-yellow-700"
+                                                              : "bg-gray-100 text-gray-600"
+                                                    }`}
+                                                >
+                                                    {destination.status || "—"}
+                                                </span>
+                                            </td>
+
+                                            <td className="px-5 py-4">
+                                                <Link
+                                                    href={`/admin/galleries/${destination._id}`}
+                                                    className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
+                                                >
+                                                    View Gallery
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
