@@ -1,3 +1,4 @@
+
 "use client";
 
 import Link from "next/link";
@@ -14,7 +15,7 @@ export default function ViewDestinationGalleryPage() {
     const [loading, setLoading] = useState(true);
     const [mediaLoading, setMediaLoading] = useState(false);
     const [saving, setSaving] = useState(false);
-    const [removingImage, setRemovingImage] = useState(null);
+    const [reordering, setReordering] = useState(false);
 
     const [showMedia, setShowMedia] = useState(false);
     const [selectedImages, setSelectedImages] = useState([]);
@@ -185,50 +186,6 @@ export default function ViewDestinationGalleryPage() {
         }
     };
 
-    const handleRemoveImage = async (imageId) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to remove this image from the gallery?",
-        );
-
-        if (!confirmed) {
-            return;
-        }
-
-        try {
-            setRemovingImage(imageId);
-            setError("");
-            setSuccess("");
-
-            const response = await fetch(
-                `/api/admin/gallery?destinationId=${destinationId}&imageId=${imageId}`,
-                {
-                    method: "DELETE",
-                },
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    result.message || "Failed to remove image from gallery",
-                );
-            }
-
-            setDestination((previous) => ({
-                ...previous,
-                images: result.data.images || [],
-            }));
-
-            setSuccess("Image removed from gallery successfully.");
-        } catch (error) {
-            console.error("Remove gallery image error:", error);
-
-            setError(error.message || "Failed to remove image from gallery");
-        } finally {
-            setRemovingImage(null);
-        }
-    };
-
     const handleCloseMedia = () => {
         setShowMedia(false);
         setSelectedImages([]);
@@ -236,6 +193,68 @@ export default function ViewDestinationGalleryPage() {
 
     const handleClosePreview = () => {
         setPreviewImage(null);
+    };
+
+    // Move gallery image up/down
+    const handleMoveImage = async (index, direction) => {
+        if (!destination?.images?.length || reordering) {
+            return;
+        }
+
+        const newIndex = direction === "up" ? index - 1 : index + 1;
+
+        if (newIndex < 0 || newIndex >= destination.images.length) {
+            return;
+        }
+
+        try {
+            setReordering(true);
+            setError("");
+            setSuccess("");
+
+            const reorderedImages = [...destination.images];
+
+            const currentImage = reorderedImages[index];
+
+            reorderedImages[index] = reorderedImages[newIndex];
+            reorderedImages[newIndex] = currentImage;
+
+            const imageIds = reorderedImages.map((image) =>
+                typeof image === "string" ? image : image._id,
+            );
+
+            const response = await fetch("/api/admin/galleries", {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    destinationId,
+                    imageIds,
+                }),
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to reorder gallery",
+                );
+            }
+
+            setDestination((previous) => ({
+                ...previous,
+                images: result.data.images,
+            }));
+
+            setSuccess("Gallery order updated successfully.");
+        } catch (error) {
+            console.error("Reorder gallery error:", error);
+
+            setError(error.message || "Failed to reorder gallery");
+        } finally {
+            setReordering(false);
+        }
     };
 
     if (loading) {
@@ -251,7 +270,9 @@ export default function ViewDestinationGalleryPage() {
                 </div>
 
                 <div className="rounded-xl border border-gray-200 bg-white p-10 text-center shadow-sm">
-                    <p className="text-sm text-gray-500">Loading gallery...</p>
+                    <p className="text-sm text-gray-500">
+                        Loading gallery...
+                    </p>
                 </div>
             </div>
         );
@@ -412,15 +433,23 @@ export default function ViewDestinationGalleryPage() {
 
             {/* Gallery */}
             <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
-                <div className="border-b border-gray-200 px-5 py-4">
-                    <h2 className="text-base font-semibold text-gray-900">
-                        Gallery Images
-                    </h2>
+                <div className="flex flex-col gap-3 border-b border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                        <h2 className="text-base font-semibold text-gray-900">
+                            Gallery Images
+                        </h2>
 
-                    <p className="mt-1 text-sm text-gray-500">
-                        {images.length}{" "}
-                        {images.length === 1 ? "image" : "images"}
-                    </p>
+                        <p className="mt-1 text-sm text-gray-500">
+                            {images.length}{" "}
+                            {images.length === 1 ? "image" : "images"}
+                        </p>
+                    </div>
+
+                    {images.length > 1 && (
+                        <p className="text-xs text-gray-500">
+                            Use ↑ ↓ to change image order
+                        </p>
+                    )}
                 </div>
 
                 {images.length === 0 ? (
@@ -451,51 +480,75 @@ export default function ViewDestinationGalleryPage() {
                             return (
                                 <div
                                     key={image?._id || index}
-                                    className="group overflow-hidden rounded-xl border border-gray-200 bg-white"
+                                    className="overflow-hidden rounded-xl border border-gray-200 bg-white"
                                 >
-                                    <div className="relative">
-                                        {imageUrl ? (
-                                            <button
-                                                type="button"
-                                                onClick={() =>
-                                                    setPreviewImage({
-                                                        url: imageUrl,
-                                                        alt: imageAlt,
-                                                    })
-                                                }
-                                                className="block w-full cursor-zoom-in"
-                                            >
+                                    {/* Image */}
+                                    <button
+                                        type="button"
+                                        onClick={() =>
+                                            imageUrl &&
+                                            setPreviewImage({
+                                                url: imageUrl,
+                                                alt: imageAlt,
+                                            })
+                                        }
+                                        className="group block w-full text-left"
+                                    >
+                                        <div className="relative overflow-hidden">
+                                            {imageUrl ? (
                                                 <img
                                                     src={imageUrl}
                                                     alt={imageAlt}
-                                                    className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
+                                                    className="aspect-square w-full cursor-zoom-in object-cover transition duration-300 group-hover:scale-105"
                                                 />
-                                            </button>
-                                        ) : (
-                                            <div className="flex aspect-square items-center justify-center bg-gray-100 text-xs text-gray-400">
-                                                Image unavailable
-                                            </div>
-                                        )}
-                                    </div>
+                                            ) : (
+                                                <div className="flex aspect-square items-center justify-center bg-gray-100 text-xs text-gray-400">
+                                                    Image unavailable
+                                                </div>
+                                            )}
 
-                                    <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-2">
-                                        <span className="truncate text-xs text-gray-500">
+                                            {/* Image number */}
+                                            <div className="absolute left-2 top-2 flex h-7 min-w-7 items-center justify-center rounded-full bg-black/70 px-2 text-xs font-semibold text-white">
+                                                {index + 1}
+                                            </div>
+                                        </div>
+                                    </button>
+
+                                    {/* Controls */}
+                                    <div className="flex items-center justify-between border-t border-gray-200 px-3 py-3">
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleMoveImage(index, "up")
+                                            }
+                                            disabled={
+                                                index === 0 || reordering
+                                            }
+                                            aria-label="Move image up"
+                                            title="Move image up"
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-lg text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+                                        >
+                                            ↑
+                                        </button>
+
+                                        <span className="text-xs font-medium text-gray-500">
                                             Image {index + 1}
                                         </span>
 
                                         <button
                                             type="button"
                                             onClick={() =>
-                                                handleRemoveImage(image._id)
+                                                handleMoveImage(index, "down")
                                             }
                                             disabled={
-                                                removingImage === image._id
+                                                index === images.length - 1 ||
+                                                reordering
                                             }
-                                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                            aria-label="Move image down"
+                                            title="Move image down"
+                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-lg text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
                                         >
-                                            {removingImage === image._id
-                                                ? "Removing..."
-                                                : "Remove"}
+                                            ↓
                                         </button>
                                     </div>
                                 </div>
