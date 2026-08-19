@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function ViewDestinationGalleryPage() {
+
     const params = useParams();
     const destinationId = params?.destinationId;
 
@@ -16,6 +17,7 @@ export default function ViewDestinationGalleryPage() {
     const [mediaLoading, setMediaLoading] = useState(false);
     const [saving, setSaving] = useState(false);
     const [reordering, setReordering] = useState(false);
+    const [settingFeatured, setSettingFeatured] = useState(false);
 
     const [showMedia, setShowMedia] = useState(false);
     const [selectedImages, setSelectedImages] = useState([]);
@@ -254,6 +256,49 @@ export default function ViewDestinationGalleryPage() {
             setError(error.message || "Failed to reorder gallery");
         } finally {
             setReordering(false);
+        }
+    };
+
+    const handleSetFeaturedImage = async (imageId) => {
+        if (!imageId || settingFeatured) {
+            return;
+        }
+
+        try {
+            setSettingFeatured(true);
+            setError("");
+            setSuccess("");
+
+            const response = await fetch(
+                `/api/admin/destinations/${destinationId}`,
+                {
+                    method: "PATCH",
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                    body: JSON.stringify({
+                        featuredImage: imageId,
+                    }),
+                },
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to set featured image",
+                );
+            }
+
+            setDestination(result.data);
+
+            setSuccess("Featured image updated successfully.");
+        } catch (error) {
+            console.error("Set featured image error:", error);
+
+            setError(error.message || "Failed to set featured image");
+        } finally {
+            setSettingFeatured(false);
         }
     };
 
@@ -515,40 +560,71 @@ export default function ViewDestinationGalleryPage() {
                                     </button>
 
                                     {/* Controls */}
-                                    <div className="flex items-center justify-between border-t border-gray-200 px-3 py-3">
+                                    <div className="border-t border-gray-200 px-3 py-3">
+                                        <div className="flex items-center justify-between">
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleMoveImage(index, "up")
+                                                }
+                                                disabled={
+                                                    index === 0 || reordering
+                                                }
+                                                aria-label="Move image up"
+                                                title="Move image up"
+                                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-lg text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+                                            >
+                                                ↑
+                                            </button>
+
+                                            <span className="text-xs font-medium text-gray-500">
+                                                Image {index + 1}
+                                            </span>
+
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    handleMoveImage(
+                                                        index,
+                                                        "down",
+                                                    )
+                                                }
+                                                disabled={
+                                                    index ===
+                                                        images.length - 1 ||
+                                                    reordering
+                                                }
+                                                aria-label="Move image down"
+                                                title="Move image down"
+                                                className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-lg text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+                                            >
+                                                ↓
+                                            </button>
+                                        </div>
+
                                         <button
                                             type="button"
                                             onClick={() =>
-                                                handleMoveImage(index, "up")
+                                                handleSetFeaturedImage(
+                                                    image._id,
+                                                )
                                             }
                                             disabled={
-                                                index === 0 || reordering
+                                                settingFeatured ||
+                                                !image?._id ||
+                                                featuredImage?._id === image._id
                                             }
-                                            aria-label="Move image up"
-                                            title="Move image up"
-                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-lg text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
+                                            className={`mt-3 w-full rounded-lg px-3 py-2 text-xs font-medium transition ${
+                                                featuredImage?._id === image._id
+                                                    ? "cursor-default bg-gray-100 text-gray-500"
+                                                    : "bg-gray-900 text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                                            }`}
                                         >
-                                            ↑
-                                        </button>
-
-                                        <span className="text-xs font-medium text-gray-500">
-                                            Image {index + 1}
-                                        </span>
-
-                                        <button
-                                            type="button"
-                                            onClick={() =>
-                                                handleMoveImage(index, "down")
-                                            }
-                                            disabled={
-                                                index === images.length - 1 ||
-                                                reordering
-                                            }
-                                            aria-label="Move image down"
-                                            title="Move image down"
-                                            className="flex h-9 w-9 items-center justify-center rounded-lg border border-gray-300 text-lg text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-30"
-                                        >
-                                            ↓
+                                            {featuredImage?._id === image._id
+                                                ? "✓ Featured Image"
+                                                : settingFeatured
+                                                  ? "Setting..."
+                                                  : "Set as Featured"}
                                         </button>
                                     </div>
                                 </div>
