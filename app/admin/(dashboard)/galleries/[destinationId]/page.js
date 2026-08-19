@@ -14,6 +14,7 @@ export default function ViewDestinationGalleryPage() {
     const [loading, setLoading] = useState(true);
     const [mediaLoading, setMediaLoading] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [removingImage, setRemovingImage] = useState(null);
 
     const [showMedia, setShowMedia] = useState(false);
     const [selectedImages, setSelectedImages] = useState([]);
@@ -181,6 +182,50 @@ export default function ViewDestinationGalleryPage() {
             setError(error.message || "Failed to add images");
         } finally {
             setSaving(false);
+        }
+    };
+
+    const handleRemoveImage = async (imageId) => {
+        const confirmed = window.confirm(
+            "Are you sure you want to remove this image from the gallery?",
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setRemovingImage(imageId);
+            setError("");
+            setSuccess("");
+
+            const response = await fetch(
+                `/api/admin/gallery?destinationId=${destinationId}&imageId=${imageId}`,
+                {
+                    method: "DELETE",
+                },
+            );
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(
+                    result.message || "Failed to remove image from gallery",
+                );
+            }
+
+            setDestination((previous) => ({
+                ...previous,
+                images: result.data.images || [],
+            }));
+
+            setSuccess("Image removed from gallery successfully.");
+        } catch (error) {
+            console.error("Remove gallery image error:", error);
+
+            setError(error.message || "Failed to remove image from gallery");
+        } finally {
+            setRemovingImage(null);
         }
     };
 
@@ -404,30 +449,56 @@ export default function ViewDestinationGalleryPage() {
                                 }`;
 
                             return (
-                                <button
-                                    type="button"
+                                <div
                                     key={image?._id || index}
-                                    onClick={() =>
-                                        imageUrl &&
-                                        setPreviewImage({
-                                            url: imageUrl,
-                                            alt: imageAlt,
-                                        })
-                                    }
-                                    className="group overflow-hidden rounded-xl border border-gray-200 bg-gray-50 text-left"
+                                    className="group overflow-hidden rounded-xl border border-gray-200 bg-white"
                                 >
-                                    {imageUrl ? (
-                                        <img
-                                            src={imageUrl}
-                                            alt={imageAlt}
-                                            className="aspect-square w-full cursor-zoom-in object-cover transition duration-300 group-hover:scale-105"
-                                        />
-                                    ) : (
-                                        <div className="flex aspect-square items-center justify-center text-xs text-gray-400">
-                                            Image unavailable
-                                        </div>
-                                    )}
-                                </button>
+                                    <div className="relative">
+                                        {imageUrl ? (
+                                            <button
+                                                type="button"
+                                                onClick={() =>
+                                                    setPreviewImage({
+                                                        url: imageUrl,
+                                                        alt: imageAlt,
+                                                    })
+                                                }
+                                                className="block w-full cursor-zoom-in"
+                                            >
+                                                <img
+                                                    src={imageUrl}
+                                                    alt={imageAlt}
+                                                    className="aspect-square w-full object-cover transition duration-300 group-hover:scale-105"
+                                                />
+                                            </button>
+                                        ) : (
+                                            <div className="flex aspect-square items-center justify-center bg-gray-100 text-xs text-gray-400">
+                                                Image unavailable
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-2 border-t border-gray-200 px-3 py-2">
+                                        <span className="truncate text-xs text-gray-500">
+                                            Image {index + 1}
+                                        </span>
+
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                handleRemoveImage(image._id)
+                                            }
+                                            disabled={
+                                                removingImage === image._id
+                                            }
+                                            className="rounded-md px-2.5 py-1.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"
+                                        >
+                                            {removingImage === image._id
+                                                ? "Removing..."
+                                                : "Remove"}
+                                        </button>
+                                    </div>
+                                </div>
                             );
                         })}
                     </div>
