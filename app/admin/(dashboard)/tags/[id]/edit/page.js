@@ -7,10 +7,8 @@ import { useEffect, useState } from "react";
 import Toast from "@/components/admin/Toast";
 
 export default function EditTagPage() {
-    
     const params = useParams();
     const router = useRouter();
-
     const tagId = params?.id;
 
     const [name, setName] = useState("");
@@ -76,35 +74,22 @@ export default function EditTagPage() {
         };
     }, [tagId]);
 
-    const generateSlug = (value) => {
-        return value
-            .toLowerCase()
-            .trim()
-            .replace(/[^a-z0-9\s-]/g, "")
-            .replace(/\s+/g, "-")
-            .replace(/-+/g, "-");
-    };
-
-    const handleNameChange = (event) => {
-        setName(event.target.value);
-    };
-
     const handleSubmit = async (event) => {
         event.preventDefault();
+
+        if (!name.trim()) {
+            setError("Tag name is required.");
+            return;
+        }
+
+        if (!slug.trim()) {
+            setError("Tag slug is required.");
+            return;
+        }
 
         try {
             setSaving(true);
             setError("");
-
-            if (!name.trim()) {
-                setError("Tag name is required.");
-                return;
-            }
-
-            if (!slug.trim()) {
-                setError("Tag slug is required.");
-                return;
-            }
 
             const response = await fetch(`/api/admin/tags/${tagId}`, {
                 method: "PATCH",
@@ -248,7 +233,9 @@ export default function EditTagPage() {
                                 id="name"
                                 type="text"
                                 value={name}
-                                onChange={handleNameChange}
+                                onChange={(event) =>
+                                    setName(event.target.value)
+                                }
                                 placeholder="Enter tag name"
                                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                             />
@@ -281,6 +268,10 @@ export default function EditTagPage() {
 
                         {/* Status */}
                         <div>
+                            <p className="mb-2 block text-sm font-medium text-gray-700">
+                                Status
+                            </p>
+
                             <label
                                 htmlFor="isActive"
                                 className="flex cursor-pointer items-center gap-3"
@@ -302,6 +293,7 @@ export default function EditTagPage() {
 
                             <p className="mt-1.5 text-xs text-gray-500">
                                 Active tags can be used throughout the CMS.
+                                Uncheck to make this tag inactive.
                             </p>
                         </div>
                     </div>
