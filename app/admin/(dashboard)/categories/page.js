@@ -2,6 +2,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
 import Toast from "@/components/admin/Toast";
@@ -46,18 +47,25 @@ export default function CategoriesPage() {
     useEffect(() => {
         const toastData = sessionStorage.getItem("categoryToast");
 
-        if (toastData) {
-            try {
-                const parsedToast = JSON.parse(toastData);
+        if (!toastData) {
+            return;
+        }
 
+        try {
+            const parsedToast = JSON.parse(toastData);
+
+            const timer = setTimeout(() => {
                 showToast(
                     parsedToast.type || "success",
                     parsedToast.message || "",
                 );
-            } catch (error) {
-                console.error("Category toast error:", error);
-            }
+            }, 0);
 
+            sessionStorage.removeItem("categoryToast");
+
+            return () => clearTimeout(timer);
+        } catch (error) {
+            console.error("Category toast error:", error);
             sessionStorage.removeItem("categoryToast");
         }
     }, []);
@@ -284,12 +292,15 @@ export default function CategoriesPage() {
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
                                                     {category.image?.url ? (
-                                                        <img
+                                                        <Image
                                                             src={
                                                                 category.image
                                                                     .url
                                                             }
                                                             alt={category.name}
+                                                            width={40}
+                                                            height={40}
+                                                            unoptimized
                                                             className="h-10 w-10 rounded-lg object-cover"
                                                         />
                                                     ) : (
