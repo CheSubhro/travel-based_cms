@@ -1,15 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 
 import Toast from "@/components/admin/Toast";
 
+
 export default function NewTagPage() {
     
+    const router = useRouter();
     const [name, setName] = useState("");
     const [slug, setSlug] = useState("");
     const [isActive, setIsActive] = useState(true);
+    const slugManuallyEdited = useRef(false);
 
     const [saving, setSaving] = useState(false);
     const [error, setError] = useState("");
@@ -34,7 +38,7 @@ export default function NewTagPage() {
 
         setName(value);
 
-        if (!slug) {
+        if (!slugManuallyEdited.current) {
             setSlug(generateSlug(value));
         }
     };
@@ -78,15 +82,15 @@ export default function NewTagPage() {
                 throw new Error(result.message || "Failed to create tag");
             }
 
-            setToast({
-                show: true,
-                message: "Tag created successfully.",
-                type: "success",
-            });
+            sessionStorage.setItem(
+                "tagToast",
+                JSON.stringify({
+                    type: "success",
+                    message: "Tag created successfully.",
+                }),
+            );
 
-            setTimeout(() => {
-                window.location.href = "/admin/tags";
-            }, 800);
+            router.push("/admin/tags");
         } catch (error) {
             console.error("Create tag error:", error);
 
@@ -179,9 +183,10 @@ export default function NewTagPage() {
                                 id="slug"
                                 type="text"
                                 value={slug}
-                                onChange={(event) =>
-                                    setSlug(event.target.value)
-                                }
+                                onChange={(event) => {
+                                    slugManuallyEdited.current = true;
+                                    setSlug(event.target.value);
+                                }}
                                 placeholder="tag-slug"
                                 className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                             />

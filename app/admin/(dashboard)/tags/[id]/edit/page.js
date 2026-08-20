@@ -113,15 +113,15 @@ export default function EditTagPage() {
                 throw new Error(result.message || "Failed to update tag");
             }
 
-            setToast({
-                show: true,
-                message: "Tag updated successfully.",
-                type: "success",
-            });
+            sessionStorage.setItem(
+                "tagToast",
+                JSON.stringify({
+                    type: "success",
+                    message: "Tag updated successfully.",
+                }),
+            );
 
-            setTimeout(() => {
-                router.push("/admin/tags");
-            }, 800);
+            router.push("/admin/tags");
         } catch (error) {
             console.error("Update tag error:", error);
 

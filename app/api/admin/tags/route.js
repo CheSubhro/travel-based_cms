@@ -9,6 +9,10 @@ import { ROLES } from "@/constants/roles";
 
 import getPagination from "@/utils/pagination";
 
+const escapeRegex = (value) => {
+    return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+};
+
 export async function POST(request) {
     try {
         await connectDB();
@@ -129,16 +133,18 @@ export async function GET(request) {
         const filter = {};
 
         if (search) {
+            const searchTerm = escapeRegex(search);
+
             filter.$or = [
                 {
                     name: {
-                        $regex: search,
+                        $regex: searchTerm,
                         $options: "i",
                     },
                 },
                 {
                     slug: {
-                        $regex: search,
+                        $regex: searchTerm,
                         $options: "i",
                     },
                 },

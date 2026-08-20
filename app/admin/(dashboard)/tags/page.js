@@ -3,14 +3,24 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import Toast from "@/components/admin/Toast";
+
 export default function TagsPage() {
-    
     const [tags, setTags] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
+
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
     const [page, setPage] = useState(1);
+
+    const [deleteTag, setDeleteTag] = useState(null);
+    const [deleting, setDeleting] = useState(false);
+
+    const [toast, setToast] = useState({
+        type: "success",
+        message: "",
+    });
 
     const limit = 10;
 
@@ -23,58 +33,82 @@ export default function TagsPage() {
         hasPreviousPage: false,
     });
 
-    const loadTags = async () => {
-        try {
-            setLoading(true);
-            setError("");
-
-            const query = new URLSearchParams({
-                page: String(page),
-                limit: String(limit),
-            });
-
-            if (search.trim()) {
-                query.set("search", search.trim());
-            }
-
-            if (statusFilter !== "all") {
-                query.set("status", statusFilter);
-            }
-
-            const response = await fetch(
-                `/api/admin/tags?${query.toString()}`,
-                {
-                    cache: "no-store",
-                },
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || "Failed to fetch tags");
-            }
-
-            setTags(result.data || []);
-
-            setPagination(
-                result.pagination || {
-                    page: 1,
-                    limit: 10,
-                    total: 0,
-                    totalPages: 0,
-                    hasNextPage: false,
-                    hasPreviousPage: false,
-                },
-            );
-        } catch (error) {
-            console.error("Fetch tags error:", error);
-            setError(error.message || "Failed to fetch tags");
-        } finally {
-            setLoading(false);
-        }
-    };
-
+    // Read toast message after navigation from create page
     useEffect(() => {
+        const storedToast = sessionStorage.getItem("tagToast");
+
+        if (!storedToast) {
+            return;
+        }
+
+        try {
+            const parsedToast = JSON.parse(storedToast);
+
+            setToast({
+                type: parsedToast.type || "success",
+                message: parsedToast.message || "",
+            });
+        } catch (error) {
+            console.error("Read tag toast error:", error);
+        } finally {
+            sessionStorage.removeItem("tagToast");
+        }
+    }, []);
+
+    // Load tags
+    useEffect(() => {
+        const loadTags = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const query = new URLSearchParams({
+                    page: String(page),
+                    limit: String(limit),
+                });
+
+                if (search.trim()) {
+                    query.set("search", search.trim());
+                }
+
+                if (statusFilter !== "all") {
+                    query.set("status", statusFilter);
+                }
+
+                const response = await fetch(
+                    `/api/admin/tags?${query.toString()}`,
+                    {
+                        cache: "no-store",
+                    },
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(result.message || "Failed to fetch tags");
+                }
+
+                setTags(result.data || []);
+
+                setPagination(
+                    result.pagination || {
+                        page: 1,
+                        limit: 10,
+                        total: 0,
+                        totalPages: 0,
+                        hasNextPage: false,
+                        hasPreviousPage: false,
+                    },
+                );
+            } catch (error) {
+                console.error("Fetch tags error:", error);
+
+                setError(error.message || "Failed to fetch tags");
+            } finally {
+                setLoading(false);
+            }
+        };
+
         loadTags();
     }, [page, search, statusFilter]);
 
@@ -94,19 +128,16 @@ export default function TagsPage() {
         setPage(1);
     };
 
-    const handleDelete = async (id) => {
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this tag?",
-        );
-
-        if (!confirmed) {
+    const handleDelete = async () => {
+        if (!deleteTag) {
             return;
         }
 
         try {
+            setDeleting(true);
             setError("");
 
-            const response = await fetch(`/api/admin/tags/${id}`, {
+            const response = await fetch(`/api/admin/tags/${deleteTag._id}`, {
                 method: "DELETE",
             });
 
@@ -116,21 +147,49 @@ export default function TagsPage() {
                 throw new Error(result.message || "Failed to delete tag");
             }
 
-            setTags((previous) => previous.filter((tag) => tag._id !== id));
+            setTags((previous) =>
+                previous.filter((tag) => tag._id !== deleteTag._id),
+            );
 
-            if (tags.length === 1 && page > 1) {
-                setPage((previous) => Math.max(previous - 1, 1));
-            } else {
-                loadTags();
-            }
+            setPagination((previous) => ({
+                ...previous,
+                total: Math.max(previous.total - 1, 0),
+            }));
+
+            setDeleteTag(null);
+
+            setToast({
+                type: "success",
+                message: result.message || "Tag deleted successfully.",
+            });
         } catch (error) {
             console.error("Delete tag error:", error);
-            setError(error.message || "Failed to delete tag");
+
+            setToast({
+                type: "error",
+                message: error.message || "Failed to delete tag",
+            });
+        } finally {
+            setDeleting(false);
         }
     };
 
     return (
         <div>
+            {/* Toast */}
+            {toast.message && (
+                <Toast
+                    type={toast.type}
+                    message={toast.message}
+                    onClose={() =>
+                        setToast({
+                            type: "success",
+                            message: "",
+                        })
+                    }
+                />
+            )}
+
             {/* Header */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -313,7 +372,7 @@ export default function TagsPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() =>
-                                                        handleDelete(tag._id)
+                                                        setDeleteTag(tag)
                                                     }
                                                     className="text-sm font-medium text-red-600 transition hover:text-red-700"
                                                 >
@@ -359,6 +418,47 @@ export default function TagsPage() {
                             >
                                 Next
                             </button>
+                        </div>
+                    </div>
+                )}
+
+                {/* Delete Confirmation Modal */}
+                {deleteTag && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+                            <h2 className="text-lg font-semibold text-gray-900">
+                                Delete Tag
+                            </h2>
+
+                            <p className="mt-2 text-sm leading-6 text-gray-500">
+                                Are you sure you want to delete{" "}
+                                <span className="font-semibold text-gray-900">
+                                    {deleteTag.name}
+                                </span>
+                                ?
+                                <br />
+                                This action cannot be undone.
+                            </p>
+
+                            <div className="mt-6 flex justify-end gap-3">
+                                <button
+                                    type="button"
+                                    onClick={() => setDeleteTag(null)}
+                                    disabled={deleting}
+                                    className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-50"
+                                >
+                                    Cancel
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={handleDelete}
+                                    disabled={deleting}
+                                    className="rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    {deleting ? "Deleting..." : "Delete"}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 )}
