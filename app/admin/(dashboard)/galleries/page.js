@@ -13,32 +13,34 @@ export default function GalleriesPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
-    const loadGalleries = async () => {
-        try {
-            setLoading(true);
-            setError("");
-
-            const response = await fetch("/api/admin/destinations", {
-                cache: "no-store",
-            });
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.message || "Failed to fetch galleries");
-            }
-
-            setDestinations(result.data || []);
-        } catch (error) {
-            console.error("Fetch galleries error:", error);
-
-            setError(error.message || "Failed to fetch galleries");
-        } finally {
-            setLoading(false);
-        }
-    };
-
     useEffect(() => {
+        const loadGalleries = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const response = await fetch("/api/admin/destinations", {
+                    cache: "no-store",
+                });
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message || "Failed to fetch galleries",
+                    );
+                }
+
+                setDestinations(result.data || []);
+            } catch (error) {
+                console.error("Fetch galleries error:", error);
+
+                setError(error.message || "Failed to fetch galleries");
+            } finally {
+                setLoading(false);
+            }
+        };
+
         loadGalleries();
     }, []);
 

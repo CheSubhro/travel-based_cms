@@ -32,7 +32,37 @@ export default function ViewDestinationGalleryPage() {
             return;
         }
 
-        fetchDestination();
+        const loadDestination = async () => {
+            try {
+                setLoading(true);
+                setError("");
+
+                const response = await fetch(
+                    `/api/admin/destinations/${destinationId}`,
+                    {
+                        cache: "no-store",
+                    },
+                );
+
+                const result = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(
+                        result.message || "Failed to fetch destination",
+                    );
+                }
+
+                setDestination(result.data);
+            } catch (error) {
+                console.error("Fetch destination gallery error:", error);
+
+                setError(error.message || "Failed to load destination gallery");
+            } finally {
+                setLoading(false);
+            }
+        };
+
+        loadDestination();
     }, [destinationId]);
 
     useEffect(() => {
@@ -50,36 +80,6 @@ export default function ViewDestinationGalleryPage() {
             document.removeEventListener("keydown", handleEscape);
         };
     }, [previewImage]);
-
-    const fetchDestination = async () => {
-        try {
-            setLoading(true);
-            setError("");
-
-            const response = await fetch(
-                `/api/admin/destinations/${destinationId}`,
-                {
-                    cache: "no-store",
-                },
-            );
-
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(
-                    result.message || "Failed to fetch destination",
-                );
-            }
-
-            setDestination(result.data);
-        } catch (error) {
-            console.error("Fetch destination gallery error:", error);
-
-            setError(error.message || "Failed to load destination gallery");
-        } finally {
-            setLoading(false);
-        }
-    };
 
     const fetchMedia = async () => {
         try {
