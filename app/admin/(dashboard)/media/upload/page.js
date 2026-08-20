@@ -144,9 +144,17 @@ export default function UploadMediaPage() {
             />
 
             <div className="w-full space-y-6">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold text-gray-900">
+                {/* Header */}
+                <div className="mb-6">
+                    <Link
+                        href="/admin/media"
+                        className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
+                    >
+                        ← Back to Media
+                    </Link>
+
+                    <div className="mt-4">
+                        <h1 className="text-2xl font-bold text-gray-900">
                             Upload Media
                         </h1>
 
@@ -154,13 +162,6 @@ export default function UploadMediaPage() {
                             Upload a new image to your media library.
                         </p>
                     </div>
-
-                    <Link
-                        href="/admin/media"
-                        className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
-                    >
-                        Back to Media
-                    </Link>
                 </div>
 
                 {error && (
