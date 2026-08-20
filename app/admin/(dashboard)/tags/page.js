@@ -1,26 +1,52 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-
-import Toast from "@/components/admin/Toast";
+import { useEffect, useState } from "react";
 
 export default function TagsPage() {
+    
     const [tags, setTags] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
-
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState("all");
+    const [page, setPage] = useState(1);
+
+    const limit = 10;
+
+    const [pagination, setPagination] = useState({
+        page: 1,
+        limit: 10,
+        total: 0,
+        totalPages: 0,
+        hasNextPage: false,
+        hasPreviousPage: false,
+    });
 
     const loadTags = async () => {
         try {
             setLoading(true);
             setError("");
 
-            const response = await fetch("/api/admin/tags", {
-                cache: "no-store",
+            const query = new URLSearchParams({
+                page: String(page),
+                limit: String(limit),
             });
+
+            if (search.trim()) {
+                query.set("search", search.trim());
+            }
+
+            if (statusFilter !== "all") {
+                query.set("status", statusFilter);
+            }
+
+            const response = await fetch(
+                `/api/admin/tags?${query.toString()}`,
+                {
+                    cache: "no-store",
+                },
+            );
 
             const result = await response.json();
 
@@ -29,6 +55,17 @@ export default function TagsPage() {
             }
 
             setTags(result.data || []);
+
+            setPagination(
+                result.pagination || {
+                    page: 1,
+                    limit: 10,
+                    total: 0,
+                    totalPages: 0,
+                    hasNextPage: false,
+                    hasPreviousPage: false,
+                },
+            );
         } catch (error) {
             console.error("Fetch tags error:", error);
             setError(error.message || "Failed to fetch tags");
@@ -39,25 +76,23 @@ export default function TagsPage() {
 
     useEffect(() => {
         loadTags();
-    }, []);
+    }, [page, search, statusFilter]);
 
-    const filteredTags = useMemo(() => {
-        const searchValue = search.trim().toLowerCase();
+    const handleSearchChange = (event) => {
+        setSearch(event.target.value);
+        setPage(1);
+    };
 
-        return tags.filter((tag) => {
-            const matchesSearch =
-                !searchValue ||
-                tag.name?.toLowerCase().includes(searchValue) ||
-                tag.slug?.toLowerCase().includes(searchValue);
+    const handleStatusChange = (event) => {
+        setStatusFilter(event.target.value);
+        setPage(1);
+    };
 
-            const matchesStatus =
-                statusFilter === "all" ||
-                (statusFilter === "active" && tag.isActive === true) ||
-                (statusFilter === "inactive" && tag.isActive === false);
-
-            return matchesSearch && matchesStatus;
-        });
-    }, [tags, search, statusFilter]);
+    const clearFilters = () => {
+        setSearch("");
+        setStatusFilter("all");
+        setPage(1);
+    };
 
     const handleDelete = async (id) => {
         const confirmed = window.confirm(
@@ -82,6 +117,12 @@ export default function TagsPage() {
             }
 
             setTags((previous) => previous.filter((tag) => tag._id !== id));
+
+            if (tags.length === 1 && page > 1) {
+                setPage((previous) => Math.max(previous - 1, 1));
+            } else {
+                loadTags();
+            }
         } catch (error) {
             console.error("Delete tag error:", error);
             setError(error.message || "Failed to delete tag");
@@ -130,7 +171,7 @@ export default function TagsPage() {
                             id="tag-search"
                             type="text"
                             value={search}
-                            onChange={(event) => setSearch(event.target.value)}
+                            onChange={handleSearchChange}
                             placeholder="Search by tag name or slug..."
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition placeholder:text-gray-400 focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                         />
@@ -147,9 +188,7 @@ export default function TagsPage() {
                         <select
                             id="tag-status"
                             value={statusFilter}
-                            onChange={(event) =>
-                                setStatusFilter(event.target.value)
-                            }
+                            onChange={handleStatusChange}
                             className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-700 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                         >
                             <option value="all">All Status</option>
@@ -162,15 +201,12 @@ export default function TagsPage() {
                 {(search || statusFilter !== "all") && (
                     <div className="mt-4 flex items-center justify-between">
                         <p className="text-sm text-gray-500">
-                            Showing {filteredTags.length} of {tags.length} tags
+                            Showing {tags.length} of {pagination.total} tags
                         </p>
 
                         <button
                             type="button"
-                            onClick={() => {
-                                setSearch("");
-                                setStatusFilter("all");
-                            }}
+                            onClick={clearFilters}
                             className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
                         >
                             Clear filters
@@ -187,31 +223,28 @@ export default function TagsPage() {
                     </div>
                 ) : tags.length === 0 ? (
                     <div className="p-10 text-center">
-                        <p className="text-sm text-gray-500">No tags found.</p>
-
-                        <Link
-                            href="/admin/tags/new"
-                            className="mt-4 inline-block rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
-                        >
-                            + Add Tag
-                        </Link>
-                    </div>
-                ) : filteredTags.length === 0 ? (
-                    <div className="p-10 text-center">
                         <p className="text-sm text-gray-500">
-                            No tags match your search or filter.
+                            {search || statusFilter !== "all"
+                                ? "No tags match your search or filter."
+                                : "No tags found."}
                         </p>
 
-                        <button
-                            type="button"
-                            onClick={() => {
-                                setSearch("");
-                                setStatusFilter("all");
-                            }}
-                            className="mt-4 text-sm font-medium text-gray-700 underline hover:text-gray-900"
-                        >
-                            Clear filters
-                        </button>
+                        {search || statusFilter !== "all" ? (
+                            <button
+                                type="button"
+                                onClick={clearFilters}
+                                className="mt-4 text-sm font-medium text-gray-700 underline hover:text-gray-900"
+                            >
+                                Clear filters
+                            </button>
+                        ) : (
+                            <Link
+                                href="/admin/tags/new"
+                                className="mt-4 inline-block rounded-lg bg-gray-900 px-4 py-2 text-sm font-medium text-white transition hover:bg-gray-800"
+                            >
+                                + Add Tag
+                            </Link>
+                        )}
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
@@ -237,7 +270,7 @@ export default function TagsPage() {
                             </thead>
 
                             <tbody className="divide-y divide-gray-200">
-                                {filteredTags.map((tag) => (
+                                {tags.map((tag) => (
                                     <tr
                                         key={tag._id}
                                         className="transition hover:bg-gray-50"
@@ -292,6 +325,41 @@ export default function TagsPage() {
                                 ))}
                             </tbody>
                         </table>
+                    </div>
+                )}
+
+                {/* Pagination */}
+                {!loading && pagination.totalPages > 1 && (
+                    <div className="flex flex-col gap-3 border-t border-gray-200 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+                        <p className="text-sm text-gray-500">
+                            Page {pagination.page} of {pagination.totalPages}
+                        </p>
+
+                        <div className="flex items-center gap-2">
+                            <button
+                                type="button"
+                                disabled={!pagination.hasPreviousPage}
+                                onClick={() =>
+                                    setPage((previous) =>
+                                        Math.max(previous - 1, 1),
+                                    )
+                                }
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Previous
+                            </button>
+
+                            <button
+                                type="button"
+                                disabled={!pagination.hasNextPage}
+                                onClick={() =>
+                                    setPage((previous) => previous + 1)
+                                }
+                                className="rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Next
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

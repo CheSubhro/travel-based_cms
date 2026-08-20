@@ -7,6 +7,8 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import getPagination from "@/utils/pagination";
+
 export async function POST(request) {
     try {
         await connectDB();
@@ -91,7 +93,7 @@ export async function POST(request) {
     }
 }
 
-export async function GET() {
+export async function GET(request) {
     try {
         await connectDB();
 
@@ -111,11 +113,69 @@ export async function GET() {
             );
         }
 
-        const tags = await Tag.find().sort({ createdAt: -1 }).lean();
+        const { searchParams } = new URL(request.url);
+
+        const page = searchParams.get("page") || 1;
+        const limit = searchParams.get("limit") || 10;
+        const search = searchParams.get("search")?.trim() || "";
+        const status = searchParams.get("status") || "all";
+
+        const {
+            page: currentPage,
+            limit: perPage,
+            skip,
+        } = getPagination(page, limit);
+
+        const filter = {};
+
+        if (search) {
+            filter.$or = [
+                {
+                    name: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+                {
+                    slug: {
+                        $regex: search,
+                        $options: "i",
+                    },
+                },
+            ];
+        }
+
+        if (status === "active") {
+            filter.isActive = true;
+        }
+
+        if (status === "inactive") {
+            filter.isActive = false;
+        }
+
+        const [tags, total] = await Promise.all([
+            Tag.find(filter)
+                .sort({ createdAt: -1 })
+                .skip(skip)
+                .limit(perPage)
+                .lean(),
+
+            Tag.countDocuments(filter),
+        ]);
+
+        const totalPages = Math.ceil(total / perPage);
 
         return NextResponse.json({
             success: true,
             data: tags,
+            pagination: {
+                page: currentPage,
+                limit: perPage,
+                total,
+                totalPages,
+                hasNextPage: currentPage < totalPages,
+                hasPreviousPage: currentPage > 1,
+            },
         });
     } catch (error) {
         console.error("GET admin tags error:", error);
