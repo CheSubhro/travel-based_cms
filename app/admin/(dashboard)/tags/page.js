@@ -32,8 +32,8 @@ export default function TagsPage() {
         hasNextPage: false,
         hasPreviousPage: false,
     });
-
-    // Read toast message after navigation from create page
+    
+    // Read toast message after navigation from create/edit page
     useEffect(() => {
         const storedToast = sessionStorage.getItem("tagToast");
 
@@ -44,6 +44,7 @@ export default function TagsPage() {
         try {
             const parsedToast = JSON.parse(storedToast);
 
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             setToast({
                 type: parsedToast.type || "success",
                 message: parsedToast.message || "",
