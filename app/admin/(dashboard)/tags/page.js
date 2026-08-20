@@ -3,12 +3,21 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 
+import Toast from "@/components/admin/Toast";
+
 export default function TagsPage() {
     
     const [tags, setTags] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [deleting, setDeleting] = useState(null);
     const [error, setError] = useState("");
     const [search, setSearch] = useState("");
+
+    const [toast, setToast] = useState({
+        show: false,
+        message: "",
+        type: "success",
+    });
 
     useEffect(() => {
         let cancelled = false;
@@ -51,6 +60,51 @@ export default function TagsPage() {
         };
     }, []);
 
+    const handleDelete = async (tag) => {
+        const confirmed = window.confirm(
+            `Are you sure you want to delete "${tag.name}"?`,
+        );
+
+        if (!confirmed) {
+            return;
+        }
+
+        try {
+            setDeleting(tag._id);
+            setError("");
+
+            const response = await fetch(`/api/admin/tags/${tag._id}`, {
+                method: "DELETE",
+            });
+
+            const result = await response.json();
+
+            if (!response.ok) {
+                throw new Error(result.message || "Failed to delete tag");
+            }
+
+            setTags((previous) =>
+                previous.filter((item) => item._id !== tag._id),
+            );
+
+            setToast({
+                show: true,
+                message: "Tag deleted successfully.",
+                type: "success",
+            });
+        } catch (error) {
+            console.error("Delete tag error:", error);
+
+            setToast({
+                show: true,
+                message: error.message || "Failed to delete tag",
+                type: "error",
+            });
+        } finally {
+            setDeleting(null);
+        }
+    };
+
     const filteredTags = tags.filter((tag) => {
         const searchValue = search.trim().toLowerCase();
 
@@ -66,6 +120,18 @@ export default function TagsPage() {
 
     return (
         <div>
+            <Toast
+                show={toast.show}
+                message={toast.message}
+                type={toast.type}
+                onClose={() =>
+                    setToast((previous) => ({
+                        ...previous,
+                        show: false,
+                    }))
+                }
+            />
+
             {/* Header */}
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -133,7 +199,7 @@ export default function TagsPage() {
                     </div>
                 ) : (
                     <div className="overflow-x-auto">
-                        <table className="w-full min-w-[800px]">
+                        <table className="w-full min-w-[900px]">
                             <thead className="border-b border-gray-200 bg-gray-50">
                                 <tr>
                                     <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -206,23 +272,36 @@ export default function TagsPage() {
 
                                         {/* Actions */}
                                         <td className="px-5 py-4">
-                                            <Link
-                                                href={`/admin/tags/${tag._id}`}
-                                                className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
-                                            >
-                                                View
-                                            </Link>
+                                            <div className="flex items-center gap-3">
+                                                <Link
+                                                    href={`/admin/tags/${tag._id}`}
+                                                    className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
+                                                >
+                                                    View
+                                                </Link>
 
-                                            <span className="mx-2 text-gray-300">
-                                                |
-                                            </span>
+                                                <Link
+                                                    href={`/admin/tags/${tag._id}/edit`}
+                                                    className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
+                                                >
+                                                    Edit
+                                                </Link>
 
-                                            <Link
-                                                href={`/admin/tags/${tag._id}/edit`}
-                                                className="text-sm font-medium text-gray-700 transition hover:text-gray-900"
-                                            >
-                                                Edit
-                                            </Link>
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleDelete(tag)
+                                                    }
+                                                    disabled={
+                                                        deleting === tag._id
+                                                    }
+                                                    className="text-sm font-medium text-red-600 transition hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50"
+                                                >
+                                                    {deleting === tag._id
+                                                        ? "Deleting..."
+                                                        : "Delete"}
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 ))}
