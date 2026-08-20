@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 export default function CreateCategoryPage() {
-    
+
     const router = useRouter();
 
     const [media, setMedia] = useState([]);
@@ -96,7 +96,16 @@ export default function CreateCategoryPage() {
                 throw new Error(result.message || "Failed to create category");
             }
 
+            sessionStorage.setItem(
+                "categoryToast",
+                JSON.stringify({
+                    type: "success",
+                    message: "Category created successfully.",
+                }),
+            );
+
             router.push("/admin/categories");
+
         } catch (error) {
             console.error("Create category error:", error);
 

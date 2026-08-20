@@ -44,6 +44,25 @@ export default function CategoriesPage() {
     };
 
     useEffect(() => {
+        const toastData = sessionStorage.getItem("categoryToast");
+
+        if (toastData) {
+            try {
+                const parsedToast = JSON.parse(toastData);
+
+                showToast(
+                    parsedToast.type || "success",
+                    parsedToast.message || "",
+                );
+            } catch (error) {
+                console.error("Category toast error:", error);
+            }
+
+            sessionStorage.removeItem("categoryToast");
+        }
+    }, []);
+
+    useEffect(() => {
         const loadCategories = async () => {
             try {
                 setLoading(true);

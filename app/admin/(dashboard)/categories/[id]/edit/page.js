@@ -138,14 +138,18 @@ export default function EditCategoryPage() {
 
             if (!response.ok) {
                 setFieldErrors(result.errors || []);
-
-                throw new Error(
-                    result.message || "Failed to update category",
-                );
+                throw new Error(result.message || "Failed to update category");
             }
 
+            sessionStorage.setItem(
+                "categoryToast",
+                JSON.stringify({
+                    type: "success",
+                    message: "Category updated successfully.",
+                }),
+            );
+
             router.push("/admin/categories");
-            router.refresh();
         } catch (error) {
             console.error("Update category error:", error);
 
@@ -188,7 +192,7 @@ export default function EditCategoryPage() {
                 </div>
             </div>
 
-            <div className="max-w-3xl">
+            <div className="w-full">
                 <form
                     onSubmit={handleSubmit}
                     className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
@@ -210,8 +214,7 @@ export default function EditCategoryPage() {
                                     <li key={index}>
                                         {typeof item === "string"
                                             ? item
-                                            : item.message ||
-                                              "Invalid value"}
+                                            : item.message || "Invalid value"}
                                     </li>
                                 ))}
                             </ul>
@@ -239,8 +242,7 @@ export default function EditCategoryPage() {
                             />
 
                             <p className="mt-1.5 text-xs text-gray-500">
-                                Minimum 2 characters, maximum 100
-                                characters.
+                                Minimum 2 characters, maximum 100 characters.
                             </p>
                         </div>
 
@@ -305,17 +307,11 @@ export default function EditCategoryPage() {
                                 onChange={handleChange}
                                 className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                             >
-                                <option value="">
-                                    No image
-                                </option>
+                                <option value="">No image</option>
 
                                 {media.map((item) => (
-                                    <option
-                                        key={item._id}
-                                        value={item._id}
-                                    >
-                                        {item.originalName ||
-                                            item.publicId}
+                                    <option key={item._id} value={item._id}>
+                                        {item.originalName || item.publicId}
                                     </option>
                                 ))}
                             </select>
@@ -329,8 +325,7 @@ export default function EditCategoryPage() {
                                     {media
                                         .filter(
                                             (item) =>
-                                                item._id ===
-                                                formData.image,
+                                                item._id === formData.image,
                                         )
                                         .map((item) => (
                                             <div
@@ -375,8 +370,8 @@ export default function EditCategoryPage() {
                                     </p>
 
                                     <p className="mt-1 text-xs text-gray-500">
-                                        Active categories can be used across
-                                        the Travel CMS.
+                                        Active categories can be used across the
+                                        Travel CMS.
                                     </p>
                                 </div>
                             </label>
@@ -396,9 +391,7 @@ export default function EditCategoryPage() {
                             disabled={loading}
                             className="rounded-lg bg-gray-900 px-5 py-2.5 text-sm font-medium text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
                         >
-                            {loading
-                                ? "Updating..."
-                                : "Update Category"}
+                            {loading ? "Updating..." : "Update Category"}
                         </button>
                     </div>
                 </form>
