@@ -1,16 +1,16 @@
-
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 export default function CreateCategoryPage() {
+    
+    const router = useRouter();
 
     const [media, setMedia] = useState([]);
     const [loadingData, setLoadingData] = useState(true);
-
-    const router = useRouter();
+    const [loading, setLoading] = useState(false);
 
     const [formData, setFormData] = useState({
         name: "",
@@ -20,7 +20,6 @@ export default function CreateCategoryPage() {
         isActive: true,
     });
 
-    const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [fieldErrors, setFieldErrors] = useState([]);
 
@@ -34,6 +33,32 @@ export default function CreateCategoryPage() {
 
         setError("");
         setFieldErrors([]);
+    };
+
+    const handleNameChange = (event) => {
+        const value = event.target.value;
+
+        const generatedSlug = value
+            .toLowerCase()
+            .trim()
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+
+        setFormData((previous) => ({
+            ...previous,
+            name: value,
+            slug: generatedSlug,
+        }));
+
+        setError("");
+        setFieldErrors([]);
+    };
+
+    const handleImageChange = (imageId) => {
+        setFormData((previous) => ({
+            ...previous,
+            image: previous.image === imageId ? "" : imageId,
+        }));
     };
 
     const handleSubmit = async (event) => {
@@ -68,18 +93,14 @@ export default function CreateCategoryPage() {
             if (!response.ok) {
                 setFieldErrors(result.errors || []);
 
-                throw new Error(
-                    result.message || "Failed to create category",
-                );
+                throw new Error(result.message || "Failed to create category");
             }
 
             router.push("/admin/categories");
         } catch (error) {
             console.error("Create category error:", error);
 
-            setError(
-                error.message || "Failed to create category",
-            );
+            setError(error.message || "Failed to create category");
         } finally {
             setLoading(false);
         }
@@ -89,9 +110,10 @@ export default function CreateCategoryPage() {
         const fetchMedia = async () => {
             try {
                 setLoadingData(true);
-                setError("");
 
-                const response = await fetch("/api/admin/media?limit=100");
+                const response = await fetch("/api/admin/media?limit=100", {
+                    cache: "no-store",
+                });
 
                 if (!response.ok) {
                     throw new Error("Failed to fetch media");
@@ -102,6 +124,7 @@ export default function CreateCategoryPage() {
                 setMedia(result.data || []);
             } catch (error) {
                 console.error("Fetch category media error:", error);
+
                 setError("Failed to load media");
             } finally {
                 setLoadingData(false);
@@ -111,15 +134,9 @@ export default function CreateCategoryPage() {
         fetchMedia();
     }, []);
 
-    const handleImageChange = (imageId) => {
-        setFormData((previous) => ({
-            ...previous,
-            image: previous.image === imageId ? "" : imageId,
-        }));
-    };
-
     return (
         <div>
+            {/* Header */}
             <div className="mb-6">
                 <Link
                     href="/admin/categories"
@@ -139,17 +156,20 @@ export default function CreateCategoryPage() {
                 </div>
             </div>
 
-            <div className="max-w-3xl">
+            {/* Form */}
+            <div className="w-full">
                 <form
                     onSubmit={handleSubmit}
                     className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
                 >
+                    {/* General Error */}
                     {error && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                             {error}
                         </div>
                     )}
 
+                    {/* Field Errors */}
                     {fieldErrors.length > 0 && (
                         <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4">
                             <p className="text-sm font-medium text-red-700">
@@ -169,6 +189,7 @@ export default function CreateCategoryPage() {
                     )}
 
                     <div className="space-y-6">
+                        {/* Category Name */}
                         <div>
                             <label
                                 htmlFor="name"
@@ -178,15 +199,16 @@ export default function CreateCategoryPage() {
                             </label>
 
                             <input
+                                type="text"
                                 id="name"
                                 name="name"
-                                type="text"
                                 value={formData.name}
-                                onChange={handleChange}
-                                placeholder="e.g. Beach"
-                                required
+                                onChange={handleNameChange}
+                                placeholder="Enter category name"
+                                minLength={2}
                                 maxLength={100}
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                                required
+                                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
                             />
 
                             <p className="mt-1.5 text-xs text-gray-500">
@@ -194,6 +216,7 @@ export default function CreateCategoryPage() {
                             </p>
                         </div>
 
+                        {/* Slug */}
                         <div>
                             <label
                                 htmlFor="slug"
@@ -203,21 +226,21 @@ export default function CreateCategoryPage() {
                             </label>
 
                             <input
+                                type="text"
                                 id="slug"
                                 name="slug"
-                                type="text"
                                 value={formData.slug}
-                                onChange={handleChange}
-                                placeholder="e.g. beach"
+                                readOnly
                                 required
-                                className="w-full rounded-lg border border-gray-300 px-3 py-2.5 text-sm outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500"
+                                className="w-full rounded-lg border border-gray-300 bg-gray-50 px-4 py-2.5 text-sm text-gray-700 outline-none"
                             />
 
                             <p className="mt-1.5 text-xs text-gray-500">
-                                Use lowercase letters, numbers and hyphens.
+                                Automatically generated from the category name.
                             </p>
                         </div>
 
+                        {/* Description */}
                         <div>
                             <label
                                 htmlFor="description"
@@ -242,6 +265,7 @@ export default function CreateCategoryPage() {
                             </p>
                         </div>
 
+                        {/* Image */}
                         <div>
                             <label className="mb-1.5 block text-sm font-medium text-gray-700">
                                 Image
@@ -252,7 +276,13 @@ export default function CreateCategoryPage() {
                                 Library.
                             </p>
 
-                            {media.length === 0 ? (
+                            {loadingData ? (
+                                <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
+                                    <p className="text-sm text-gray-500">
+                                        Loading media...
+                                    </p>
+                                </div>
+                            ) : media.length === 0 ? (
                                 <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                                     <p className="text-sm text-gray-500">
                                         No media available.
@@ -303,6 +333,7 @@ export default function CreateCategoryPage() {
                                 </div>
                             )}
 
+                            {/* Remove Image */}
                             {formData.image && (
                                 <button
                                     type="button"
@@ -319,6 +350,7 @@ export default function CreateCategoryPage() {
                             )}
                         </div>
 
+                        {/* Active */}
                         <div className="rounded-lg border border-gray-200 bg-gray-50 p-4">
                             <label className="flex cursor-pointer items-center gap-3">
                                 <input
@@ -343,6 +375,7 @@ export default function CreateCategoryPage() {
                         </div>
                     </div>
 
+                    {/* Buttons */}
                     <div className="mt-8 flex justify-end gap-3 border-t border-gray-200 pt-6">
                         <Link
                             href="/admin/categories"
