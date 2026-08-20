@@ -7,14 +7,10 @@ import { useEffect, useState } from "react";
 import Toast from "@/components/admin/Toast";
 
 export default function EditMediaPage() {
-    
     const params = useParams();
     const router = useRouter();
 
     const [media, setMedia] = useState(null);
-
-    const [alt, setAlt] = useState("");
-    const [caption, setCaption] = useState("");
     const [isActive, setIsActive] = useState(true);
 
     const [loading, setLoading] = useState(true);
@@ -59,12 +55,9 @@ export default function EditMediaPage() {
                 const item = result.data;
 
                 setMedia(item);
-                setAlt(item.alt || "");
-                setCaption(item.caption || "");
                 setIsActive(item.isActive ?? true);
             } catch (error) {
                 console.error("Fetch media error:", error);
-
                 setError(error.message || "Failed to fetch media");
             } finally {
                 setLoading(false);
@@ -81,21 +74,6 @@ export default function EditMediaPage() {
 
         setError("");
 
-        if (!alt.trim()) {
-            setError("Alt text is required.");
-            return;
-        }
-
-        if (alt.trim().length > 200) {
-            setError("Alt text cannot exceed 200 characters.");
-            return;
-        }
-
-        if (caption.trim().length > 500) {
-            setError("Caption cannot exceed 500 characters.");
-            return;
-        }
-
         try {
             setSaving(true);
 
@@ -105,8 +83,6 @@ export default function EditMediaPage() {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    alt: alt.trim(),
-                    caption: caption.trim(),
                     isActive,
                 }),
             });
@@ -136,7 +112,7 @@ export default function EditMediaPage() {
 
     if (loading) {
         return (
-            <div className="flex min-h-[400px] items-center justify-center">
+            <div className="flex min-h-[300px] items-center justify-center">
                 <p className="text-sm text-gray-500">Loading media...</p>
             </div>
         );
@@ -147,12 +123,12 @@ export default function EditMediaPage() {
             <div>
                 <Link
                     href="/admin/media"
-                    className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                    className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
                 >
                     ← Back to Media
                 </Link>
 
-                <div className="mt-6 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                <div className="mt-4 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                     <p className="text-sm text-gray-500">Media not found.</p>
                 </div>
             </div>
@@ -168,10 +144,11 @@ export default function EditMediaPage() {
             />
 
             <div>
+                {/* Header */}
                 <div className="mb-6">
                     <Link
                         href="/admin/media"
-                        className="text-sm font-medium text-gray-600 hover:text-gray-900"
+                        className="text-sm font-medium text-gray-600 transition hover:text-gray-900"
                     >
                         ← Back to Media
                     </Link>
@@ -182,34 +159,37 @@ export default function EditMediaPage() {
                         </h1>
 
                         <p className="mt-1 text-sm text-gray-500">
-                            Update media information.
+                            Update media status.
                         </p>
                     </div>
                 </div>
 
+                {/* Error */}
                 {error && (
-                    <div className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+                    <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-700">
                         {error}
                     </div>
                 )}
 
-                <div className="max-w-3xl rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                {/* Content */}
+                <div className="w-full rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+                    {/* Media Preview */}
                     <div className="mb-6">
                         <div className="flex items-start gap-4">
                             {media.url ? (
                                 <img
                                     src={media.url}
-                                    alt={media.alt || "Media"}
-                                    className="h-24 w-24 rounded-lg object-cover"
+                                    alt={media.originalName || "Media"}
+                                    className="h-28 w-28 shrink-0 rounded-lg border border-gray-200 object-cover"
                                 />
                             ) : (
-                                <div className="flex h-24 w-24 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
+                                <div className="flex h-28 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100 text-xs text-gray-400">
                                     No image
                                 </div>
                             )}
 
                             <div className="min-w-0">
-                                <p className="truncate font-medium text-gray-900">
+                                <p className="break-words font-medium text-gray-900">
                                     {media.originalName || "Untitled"}
                                 </p>
 
@@ -217,6 +197,7 @@ export default function EditMediaPage() {
                                     {media.format
                                         ? media.format.toUpperCase()
                                         : "—"}
+
                                     {media.width && media.height
                                         ? ` • ${media.width} × ${media.height}`
                                         : ""}
@@ -230,61 +211,19 @@ export default function EditMediaPage() {
                                           ).toFixed(2)} MB`
                                         : "—"}
                                 </p>
+
+                                {media.resourceType && (
+                                    <p className="mt-1 text-sm text-gray-500">
+                                        Type: {media.resourceType}
+                                    </p>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        <div>
-                            <label
-                                htmlFor="alt"
-                                className="mb-2 block text-sm font-medium text-gray-700"
-                            >
-                                Alt Text
-                            </label>
-
-                            <input
-                                id="alt"
-                                type="text"
-                                value={alt}
-                                onChange={(event) => setAlt(event.target.value)}
-                                maxLength={200}
-                                disabled={saving}
-                                placeholder="Describe the image"
-                                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                            />
-
-                            <p className="mt-2 text-xs text-gray-500">
-                                Required. Maximum 200 characters.
-                            </p>
-                        </div>
-
-                        <div>
-                            <label
-                                htmlFor="caption"
-                                className="mb-2 block text-sm font-medium text-gray-700"
-                            >
-                                Caption
-                            </label>
-
-                            <textarea
-                                id="caption"
-                                value={caption}
-                                onChange={(event) =>
-                                    setCaption(event.target.value)
-                                }
-                                maxLength={500}
-                                rows={4}
-                                disabled={saving}
-                                placeholder="Optional image caption"
-                                className="w-full resize-none rounded-lg border border-gray-300 px-4 py-2.5 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:ring-1 focus:ring-gray-500 disabled:cursor-not-allowed disabled:bg-gray-100"
-                            />
-
-                            <p className="mt-2 text-xs text-gray-500">
-                                Optional. Maximum 500 characters.
-                            </p>
-                        </div>
-
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-5">
+                        {/* Active / Inactive */}
                         <div>
                             <label
                                 className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 transition ${
@@ -316,7 +255,8 @@ export default function EditMediaPage() {
                             </label>
                         </div>
 
-                        <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-6">
+                        {/* Buttons */}
+                        <div className="flex items-center justify-end gap-3 border-t border-gray-200 pt-5">
                             <Link
                                 href="/admin/media"
                                 className="rounded-lg border border-gray-300 px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
