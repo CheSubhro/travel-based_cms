@@ -1,6 +1,7 @@
 
 import "./globals.css";
 import siteConfig from "@/config/site";
+import Navbar from "@/components/layout/Navbar";
 
 export const metadata = {
   title: siteConfig.name,
@@ -9,8 +10,11 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>{children}</body>
-    </html>
+      <html lang="en">
+          <body>
+              <Navbar />
+              {children}
+          </body>
+      </html>
   );
 }
