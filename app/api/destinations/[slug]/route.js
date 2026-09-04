@@ -14,6 +14,7 @@ export async function GET(request, { params }) {
             status: "published",
         })
             .populate("images")
+            .populate("featuredImage")
             .populate("categories")
             .populate("author", "name email")
             .lean();
