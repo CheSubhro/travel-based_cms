@@ -1,4 +1,10 @@
+
+
 import Link from "next/link";
+
+import connectDB from "@/lib/mongodb";
+import Destination from "@/models/Destination";
+import Blog from "@/models/Blog";
 
 const getImageUrl = (image) => {
     if (!image) {
@@ -9,34 +15,38 @@ const getImageUrl = (image) => {
         return image;
     }
 
-    return image.url || "";
+    return image.url || image.secure_url || "";
 };
 
 async function getHomeData() {
     try {
-        const baseUrl =
-            process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+        await connectDB();
 
-        const [destinationsResponse, blogsResponse] = await Promise.all([
-            fetch(`${baseUrl}/api/admin/destinations?limit=6`, {
-                cache: "no-store",
-            }),
-            fetch(`${baseUrl}/api/admin/blogs?limit=6`, {
-                cache: "no-store",
-            }),
+        const [destinations, blogs] = await Promise.all([
+            Destination.find({
+                featured: true,
+                status: "published",
+                isActive: { $ne: false },
+            })
+                .populate("featuredImage")
+                .sort({ createdAt: -1 })
+                .limit(6)
+                .lean(),
+
+            Blog.find({
+                featured: true,
+                status: "published",
+                isActive: { $ne: false },
+            })
+                .populate("featuredImage")
+                .sort({ publishedAt: -1, createdAt: -1 })
+                .limit(6)
+                .lean(),
         ]);
 
-        const destinationsResult = destinationsResponse.ok
-            ? await destinationsResponse.json()
-            : { data: [] };
-
-        const blogsResult = blogsResponse.ok
-            ? await blogsResponse.json()
-            : { data: [] };
-
         return {
-            destinations: destinationsResult.data || [],
-            blogs: blogsResult.data || [],
+            destinations: JSON.parse(JSON.stringify(destinations)),
+            blogs: JSON.parse(JSON.stringify(blogs)),
         };
     } catch (error) {
         console.error("Home page data error:", error);
@@ -49,21 +59,10 @@ async function getHomeData() {
 }
 
 export default async function Home() {
-    const appName = process.env.NEXT_PUBLIC_APP_NAME || "Travel Explorer";
+    const appName =
+        process.env.NEXT_PUBLIC_APP_NAME || "TravelBase";
 
     const { destinations, blogs } = await getHomeData();
-
-    const featuredDestinations = destinations
-        .filter((destination) => destination.isActive !== false)
-        .slice(0, 6);
-
-    const publishedBlogs = blogs
-        .filter(
-            (blog) =>
-                blog.isActive !== false &&
-                (!blog.status || blog.status.toLowerCase() === "published"),
-        )
-        .slice(0, 6);
 
     return (
         <main className="min-h-screen bg-white text-gray-900">
@@ -132,48 +131,66 @@ export default async function Home() {
                     </Link>
                 </div>
 
-                {featuredDestinations.length > 0 ? (
+                {destinations.length > 0 ? (
                     <div className="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                        {featuredDestinations.map((destination) => {
+                        {destinations.map((destination) => {
                             const imageUrl = getImageUrl(
-                                destination.image ||
-                                    destination.coverImage ||
-                                    destination.featuredImage,
+                                destination.featuredImage
                             );
 
                             return (
                                 <Link
                                     key={destination._id}
-                                    href={`/destinations/${destination.slug || destination._id}`}
+                                    href={`/destinations/${
+                                        destination.slug || destination._id
+                                    }`}
                                     className="group overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
                                 >
-                                    <div className="relative h-56 overflow-hidden bg-gray-100">
+                                    {/* Image */}
+                                    <div className="relative h-60 overflow-hidden bg-gray-100">
                                         {imageUrl ? (
                                             <img
                                                 src={imageUrl}
                                                 alt={
+                                                    destination.featuredImage
+                                                        ?.alt ||
                                                     destination.title ||
-                                                    destination.name ||
                                                     "Destination"
                                                 }
                                                 className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                                             />
                                         ) : (
-                                            <div className="flex h-full items-center justify-center text-sm text-gray-400">
+                                            <div className="flex h-full items-center justify-center bg-gray-100 text-sm text-gray-400">
                                                 No image available
                                             </div>
                                         )}
                                     </div>
 
+                                    {/* Content */}
                                     <div className="p-5">
-                                        <h3 className="text-xl font-semibold">
+                                        <div className="flex items-center justify-between gap-3">
+                                            <span className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                                {destination.location?.state ||
+                                                    "India"}
+                                            </span>
+
+                                            {destination.featured && (
+                                                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                                    Featured
+                                                </span>
+                                            )}
+                                        </div>
+
+                                        <h3 className="mt-3 text-xl font-semibold text-gray-900">
                                             {destination.title ||
-                                                destination.name}
+                                                "Untitled Destination"}
                                         </h3>
 
-                                        {destination.description && (
+                                        {destination.shortDescription && (
                                             <p className="mt-2 line-clamp-2 text-sm leading-6 text-gray-600">
-                                                {destination.description}
+                                                {
+                                                    destination.shortDescription
+                                                }
                                             </p>
                                         )}
 
@@ -188,7 +205,7 @@ export default async function Home() {
                 ) : (
                     <div className="mt-8 rounded-xl border border-dashed border-gray-300 p-10 text-center">
                         <p className="text-gray-500">
-                            No destinations available yet.
+                            No featured destinations available yet.
                         </p>
                     </div>
                 )}
@@ -220,41 +237,58 @@ export default async function Home() {
                         </Link>
                     </div>
 
-                    {publishedBlogs.length > 0 ? (
+                    {blogs.length > 0 ? (
                         <div className="mt-8 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                            {publishedBlogs.map((blog) => {
+                            {blogs.map((blog) => {
                                 const imageUrl = getImageUrl(
-                                    blog.image ||
-                                        blog.featuredImage ||
-                                        blog.coverImage,
+                                    blog.featuredImage
                                 );
 
                                 return (
                                     <Link
                                         key={blog._id}
-                                        href={`/blogs/${blog.slug || blog._id}`}
+                                        href={`/blogs/${
+                                            blog.slug || blog._id
+                                        }`}
                                         className="group overflow-hidden rounded-2xl border border-gray-200 bg-white transition hover:-translate-y-1 hover:shadow-lg"
                                     >
-                                        <div className="relative h-48 overflow-hidden bg-gray-100">
+                                        {/* Blog Image */}
+                                        <div className="relative h-52 overflow-hidden bg-gray-100">
                                             {imageUrl ? (
                                                 <img
                                                     src={imageUrl}
                                                     alt={
+                                                        blog.featuredImage
+                                                            ?.alt ||
                                                         blog.title ||
                                                         "Travel story"
                                                     }
                                                     className="h-full w-full object-cover transition duration-500 group-hover:scale-105"
                                                 />
                                             ) : (
-                                                <div className="flex h-full items-center justify-center text-sm text-gray-400">
-                                                    No image available
+                                                <div className="flex h-full flex-col items-center justify-center bg-gray-100">
+                                                    <span className="text-3xl">
+                                                        ✈
+                                                    </span>
+
+                                                    <span className="mt-2 text-sm text-gray-400">
+                                                        Travel Story
+                                                    </span>
                                                 </div>
                                             )}
                                         </div>
 
+                                        {/* Blog Content */}
                                         <div className="p-5">
-                                            <h3 className="line-clamp-2 text-xl font-semibold">
-                                                {blog.title}
+                                            {blog.featured && (
+                                                <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                                    Featured
+                                                </span>
+                                            )}
+
+                                            <h3 className="mt-3 line-clamp-2 text-xl font-semibold text-gray-900">
+                                                {blog.title ||
+                                                    "Untitled Travel Story"}
                                             </h3>
 
                                             {blog.excerpt && (
@@ -274,7 +308,7 @@ export default async function Home() {
                     ) : (
                         <div className="mt-8 rounded-xl border border-dashed border-gray-300 bg-white p-10 text-center">
                             <p className="text-gray-500">
-                                No published stories available yet.
+                                No featured published stories available yet.
                             </p>
                         </div>
                     )}
@@ -304,3 +338,4 @@ export default async function Home() {
         </main>
     );
 }
+
