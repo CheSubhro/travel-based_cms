@@ -1,0 +1,230 @@
+travel-based_cms/
+│
+├── app/
+│   ├── api/
+│   │   ├── destinations/
+│   │   │   └── route.js
+│   │   ├── blogs/
+│   │   │   └── route.js
+│   │   └── health/
+│   │       └── route.js
+│   │
+│   ├── destinations/
+│   │   ├── page.js
+│   │   └── [slug]/
+│   │       └── page.js
+│   │
+│   ├── blogs/
+│   │   ├── page.js
+│   │   └── [slug]/
+│   │       └── page.js
+│   │
+│   ├── about/
+│   │   └── page.js
+│   │
+│   ├── contact/
+│   │   └── page.js
+│   │
+│   ├── error.js
+│   ├── not-found.js
+│   ├── layout.js
+│   ├── page.js
+│   └── globals.css
+│
+├── components/
+│   ├── layout/
+│   │   ├── Navbar.js
+│   │   └── Footer.js
+│   │
+│   ├── common/
+│   │   ├── Button.js
+│   │   ├── Loader.js
+│   │   └── EmptyState.js
+│   │
+│   ├── destination/
+│   │   └── DestinationCard.js
+│   │
+│   └── blog/
+│       └── BlogCard.js
+│
+├── config/
+│   └── site.js
+│
+├── lib/
+│   ├── mongodb.js
+│   ├── apiResponse.js
+│   └── errorHandler.js
+│
+├── models/
+│   ├── Destination.js
+│   └── Blog.js
+│
+├── services/
+│   ├── destinationService.js
+│   └── blogService.js
+│
+├── constants/
+│   ├── routes.js
+│   └── messages.js
+│
+├── utils/
+│   ├── slugify.js
+│   └── validators.js
+│
+├── public/
+│   ├── images/
+│   └── icons/
+│
+├── .env.local
+├── .env.example
+├── .gitignore
+├── .prettierrc
+├── .prettierignore
+├── eslint.config.mjs
+├── postcss.config.mjs
+├── next.config.mjs
+├── package.json
+└── package-lock.json
+
+
+
+
+
+
+app/	Pages, layouts এবং API routes
+components/	Reusable UI components
+config/	Application configuration
+lib/	Database/API-এর core utilities
+models/	Mongoose schemas/models
+services/	Business logic
+constants/	Fixed routes/messages/constants
+utils/	ছোট reusable helper functions
+public/	Static images, icons ইত্যাদি
+
+
+
+
+আমাদের API request-এর flow হবে:
+
+Frontend
+   ↓
+app/api/
+   ↓
+Service
+   ↓
+Model
+   ↓
+MongoDB Atlas
+
+উদাহরণ:
+
+GET /api/destinations
+        ↓
+destinations/route.js
+        ↓
+destinationService.js
+        ↓
+Destination.js
+        ↓
+MongoDB Atlas
+
+এতে route.js-এর মধ্যে database/business logic গুঁজে দিতে হবে না।
+
+
+
+
+..,.,.,.,
+
+
+Recommended Admin Structure
+app/
+│
+├── admin/
+│   ├── layout.js
+│   ├── page.js
+│   │
+│   ├── dashboard/
+│   │   └── page.js
+│   │
+│   ├── destinations/
+│   │   ├── page.js
+│   │   ├── new/
+│   │   │   └── page.js
+│   │   └── [id]/
+│   │       └── edit/
+│   │           └── page.js
+│   │
+│   ├── blogs/
+│   │   ├── page.js
+│   │   ├── new/
+│   │   │   └── page.js
+│   │   └── [id]/
+│   │       └── edit/
+│   │           └── page.js
+│   │
+│   ├── categories/
+│   │   └── page.js
+│   │
+│   └── settings/
+│       └── page.js
+│
+└── api/
+    └── admin/
+        ├── auth/
+        │   └── route.js
+        ├── destinations/
+        │   └── route.js
+        └── blogs/
+            └── route.js
+
+
+
+
+
+travel-based_cms/
+│
+├── app/
+│   │
+│   ├── api/                    ← API / Route Handlers
+│   │   ├── destinations/
+│   │   ├── blogs/
+│   │   ├── categories/
+│   │   └── health/
+│   │
+│   ├── admin/                  ← CMS / Admin Panel
+│   │   ├── dashboard/
+│   │   ├── destinations/
+│   │   ├── blogs/
+│   │   ├── categories/
+│   │   └── settings/
+│   │
+│   ├── destinations/           ← Public Website
+│   ├── blogs/                  ← Public Website
+│   ├── about/
+│   ├── contact/
+│   │
+│   ├── error.js
+│   ├── not-found.js
+│   ├── layout.js
+│   ├── page.js
+│   └── globals.css
+│
+├── components/
+├── config/
+├── lib/
+├── models/
+├── services/
+├── constants/
+├── utils/
+├── public/
+│
+├── .env.local
+├── .env.example
+├── .gitignore
+├── .prettierrc
+├── .prettierignore
+├── eslint.config.mjs
+├── postcss.config.mjs
+├── next.config.mjs
+├── package.json
+└── package-lock.json

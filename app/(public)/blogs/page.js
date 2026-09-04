@@ -5,6 +5,9 @@ import Link from "next/link";
 import connectDB from "@/lib/mongodb";
 import Blog from "@/models/Blog";
 import Tag from "@/models/Tag";
+import Media from "@/models/Media";
+import Category from "@/models/Category";
+import User from "@/models/User";
 
 const ITEMS_PER_PAGE = 6;
 
