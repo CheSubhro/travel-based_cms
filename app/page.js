@@ -3,8 +3,10 @@
 import Link from "next/link";
 
 import connectDB from "@/lib/mongodb";
+
 import Destination from "@/models/Destination";
 import Blog from "@/models/Blog";
+import Media from "@/models/Media";
 
 const getImageUrl = (image) => {
     if (!image) {

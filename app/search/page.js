@@ -268,14 +268,26 @@ function SearchPageContent() {
                                                                 </p>
                                                             )}
 
-                                                            {(destination.city ||
-                                                                destination.state ||
-                                                                destination.country) && (
+                                                            {(destination
+                                                                .location
+                                                                ?.city ||
+                                                                destination
+                                                                    .location
+                                                                    ?.state ||
+                                                                destination
+                                                                    .location
+                                                                    ?.country) && (
                                                                 <p className="mt-4 text-sm text-gray-500">
                                                                     {[
-                                                                        destination.city,
-                                                                        destination.state,
-                                                                        destination.country,
+                                                                        destination
+                                                                            .location
+                                                                            ?.city,
+                                                                        destination
+                                                                            .location
+                                                                            ?.state,
+                                                                        destination
+                                                                            .location
+                                                                            ?.country,
                                                                     ]
                                                                         .filter(
                                                                             Boolean,
