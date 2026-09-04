@@ -46,6 +46,31 @@ async function getBlog(slug) {
     }
 }
 
+async function getRelatedBlogs(blogId) {
+    try {
+        const baseUrl =
+            process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+        const response = await fetch(
+            `${baseUrl}/api/related?type=blog&id=${blogId}`,
+            {
+                cache: "no-store",
+            },
+        );
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const result = await response.json();
+
+        return result.success && Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+        console.error("Failed to fetch related blogs:", error);
+        return [];
+    }
+}
+
 export default async function BlogDetailsPage({ params }) {
     const { slug } = await params;
 
@@ -74,6 +99,8 @@ export default async function BlogDetailsPage({ params }) {
             </main>
         );
     }
+
+    const relatedBlogs = await getRelatedBlogs(blog._id);
 
     const imageUrl = getImageUrl(blog.featuredImage);
 
@@ -168,6 +195,93 @@ export default async function BlogDetailsPage({ params }) {
                             ← Back to Blogs
                         </Link>
                     </div>
+
+                    {relatedBlogs.length > 0 && (
+                        <section className="mt-16">
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-bold text-gray-900">
+                                    Related Blogs
+                                </h2>
+
+                                <p className="mt-2 text-gray-600">
+                                    You may also enjoy these travel stories and
+                                    guides.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-8 md:grid-cols-3">
+                                {relatedBlogs.map((related) => {
+                                    const imageUrl = getImageUrl(
+                                        related.featuredImage,
+                                    );
+
+                                    return (
+                                        <article
+                                            key={related._id}
+                                            className="overflow-hidden rounded-xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                        >
+                                            <Link
+                                                href={`/blogs/${
+                                                    related.slug || related._id
+                                                }`}
+                                            >
+                                                {imageUrl ? (
+                                                    <img
+                                                        src={imageUrl}
+                                                        alt={
+                                                            related.title ||
+                                                            "Travel Blog"
+                                                        }
+                                                        className="h-56 w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-56 w-full items-center justify-center bg-gray-200 text-gray-500">
+                                                        No image available
+                                                    </div>
+                                                )}
+                                            </Link>
+
+                                            <div className="p-5">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="text-sm font-medium text-gray-600">
+                                                        {related.category
+                                                            ?.name || "Travel"}
+                                                    </span>
+
+                                                    {related.featured && (
+                                                        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                                            Featured
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <h3 className="mt-3 text-xl font-bold text-gray-900">
+                                                    {related.title}
+                                                </h3>
+
+                                                {related.excerpt && (
+                                                    <p className="mt-3 line-clamp-3 text-gray-600">
+                                                        {related.excerpt}
+                                                    </p>
+                                                )}
+
+                                                <Link
+                                                    href={`/blogs/${
+                                                        related.slug ||
+                                                        related._id
+                                                    }`}
+                                                    className="mt-4 inline-block font-semibold text-gray-900 hover:underline"
+                                                >
+                                                    Read Blog →
+                                                </Link>
+                                            </div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        </section>
+                    )}
+                    
                 </div>
             </section>
         </main>

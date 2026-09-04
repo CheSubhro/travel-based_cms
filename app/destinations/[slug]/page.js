@@ -22,10 +22,61 @@ async function getDestination(slug) {
     }
 }
 
+async function getRelatedDestinations(destinationId) {
+    try {
+        const baseUrl =
+            process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+        const response = await fetch(
+            `${baseUrl}/api/related?type=destination&id=${destinationId}`,
+            {
+                cache: "no-store",
+            },
+        );
+
+        if (!response.ok) {
+            return [];
+        }
+
+        const result = await response.json();
+
+        return result.success && Array.isArray(result.data) ? result.data : [];
+    } catch (error) {
+        console.error("Failed to fetch related destinations:", error);
+        return [];
+    }
+}
+
 export default async function DestinationDetailsPage({ params }) {
     const { slug } = await params;
 
     const destination = await getDestination(slug);
+
+    if (!destination) {
+        return (
+            <main className="min-h-screen bg-gray-50 px-6 py-20">
+                <div className="mx-auto max-w-4xl text-center">
+                    <h1 className="text-3xl font-bold text-gray-900">
+                        Destination Not Found
+                    </h1>
+
+                    <p className="mt-3 text-gray-600">
+                        The destination you are looking for does not exist.
+                    </p>
+
+                    <Link
+                        href="/destinations"
+                        className="mt-6 inline-flex rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
+                    >
+                        ← Back to Destinations
+                    </Link>
+                </div>
+            </main>
+        );
+    }
+
+    const relatedDestinations = await getRelatedDestinations(destination._id);
+
 
     if (!destination) {
         return (
@@ -272,6 +323,104 @@ export default async function DestinationDetailsPage({ params }) {
                         </aside>
                     </div>
                 </div>
+
+                {relatedDestinations.length > 0 && (
+                    <section className="px-6 pb-16">
+                        <div className="mx-auto max-w-7xl">
+                            <div className="mb-8">
+                                <h2 className="text-3xl font-bold text-gray-900">
+                                    Related Destinations
+                                </h2>
+
+                                <p className="mt-2 text-gray-600">
+                                    Explore more destinations you may also
+                                    enjoy.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                                {relatedDestinations.map((related) => {
+                                    const imageUrl =
+                                        related.featuredImage?.url ||
+                                        related.images?.[0]?.url ||
+                                        null;
+
+                                    return (
+                                        <article
+                                            key={related._id}
+                                            className="overflow-hidden rounded-2xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                        >
+                                            <Link
+                                                href={`/destinations/${
+                                                    related.slug || related._id
+                                                }`}
+                                            >
+                                                {imageUrl ? (
+                                                    <img
+                                                        src={imageUrl}
+                                                        alt={
+                                                            related
+                                                                .featuredImage
+                                                                ?.alt ||
+                                                            related.title ||
+                                                            "Travel Destination"
+                                                        }
+                                                        className="h-64 w-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="flex h-64 w-full items-center justify-center bg-gray-200 text-gray-500">
+                                                        No image available
+                                                    </div>
+                                                )}
+                                            </Link>
+
+                                            <div className="p-6">
+                                                <div className="flex items-center justify-between gap-3">
+                                                    <span className="text-sm font-medium text-gray-600">
+                                                        {related.location
+                                                            ?.city ||
+                                                            related.location
+                                                                ?.state ||
+                                                            "Travel Destination"}
+                                                    </span>
+
+                                                    {related.featured && (
+                                                        <span className="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-700">
+                                                            Featured
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <h3 className="mt-3 text-2xl font-bold text-gray-900">
+                                                    {related.title}
+                                                </h3>
+
+                                                {related.shortDescription && (
+                                                    <p className="mt-3 line-clamp-3 text-gray-600">
+                                                        {
+                                                            related.shortDescription
+                                                        }
+                                                    </p>
+                                                )}
+
+                                                <Link
+                                                    href={`/destinations/${
+                                                        related.slug ||
+                                                        related._id
+                                                    }`}
+                                                    className="mt-5 inline-block font-semibold text-gray-900 hover:underline"
+                                                >
+                                                    Explore Destination →
+                                                </Link>
+                                            </div>
+                                        </article>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </section>
+                )}
+                
             </section>
         </main>
     );
