@@ -1,3 +1,5 @@
+
+
 import Link from "next/link";
 
 async function getDestination(slug) {
@@ -5,9 +7,12 @@ async function getDestination(slug) {
         const baseUrl =
             process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-        const response = await fetch(`${baseUrl}/api/destinations/${slug}`, {
-            cache: "no-store",
-        });
+        const response = await fetch(
+            `${baseUrl}/api/destinations/${slug}`,
+            {
+                cache: "no-store",
+            },
+        );
 
         if (!response.ok) {
             return null;
@@ -40,11 +45,95 @@ async function getRelatedDestinations(destinationId) {
 
         const result = await response.json();
 
-        return result.success && Array.isArray(result.data) ? result.data : [];
+        return result.success && Array.isArray(result.data)
+            ? result.data
+            : [];
     } catch (error) {
         console.error("Failed to fetch related destinations:", error);
         return [];
     }
+}
+
+/*
+ * Dynamic SEO metadata
+ */
+export async function generateMetadata({ params }) {
+    const { slug } = await params;
+    const destination = await getDestination(slug);
+
+    if (!destination) {
+        return {
+            title: "Destination Not Found | TravelBase",
+            description: "The requested travel destination could not be found.",
+            robots: {
+                index: false,
+                follow: false,
+            },
+        };
+    }
+
+    const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    const canonicalUrl = `${baseUrl}/destinations/${destination.slug || slug}`;
+
+    const title = `${destination.title} | TravelBase`;
+
+    const description =
+        destination.shortDescription ||
+        destination.description?.slice(0, 160) ||
+        `Explore ${destination.title} with TravelBase. Discover places, travel information, and more.`;
+
+    const imageUrl =
+        destination.featuredImage?.url ||
+        destination.featuredImage?.secure_url ||
+        destination.images?.[0]?.url ||
+        destination.images?.[0]?.secure_url ||
+        null;
+
+    return {
+        title,
+        description,
+
+        alternates: {
+            canonical: canonicalUrl,
+        },
+
+        robots: {
+            index: true,
+            follow: true,
+        },
+
+        openGraph: {
+            title,
+            description,
+            url: canonicalUrl,
+            siteName: "TravelBase",
+            type: "article",
+            locale: "en_IN",
+
+            ...(imageUrl && {
+                images: [
+                    {
+                        url: imageUrl,
+                        width: 1200,
+                        height: 630,
+                        alt: destination.title,
+                    },
+                ],
+            }),
+        },
+
+        twitter: {
+            card: imageUrl ? "summary_large_image" : "summary",
+            title,
+            description,
+
+            ...(imageUrl && {
+                images: [imageUrl],
+            }),
+        },
+    };
 }
 
 export default async function DestinationDetailsPage({ params }) {
@@ -75,31 +164,9 @@ export default async function DestinationDetailsPage({ params }) {
         );
     }
 
-    const relatedDestinations = await getRelatedDestinations(destination._id);
-
-
-    if (!destination) {
-        return (
-            <main className="min-h-screen bg-gray-50 px-6 py-20">
-                <div className="mx-auto max-w-4xl text-center">
-                    <h1 className="text-3xl font-bold text-gray-900">
-                        Destination Not Found
-                    </h1>
-
-                    <p className="mt-3 text-gray-600">
-                        The destination you are looking for does not exist.
-                    </p>
-
-                    <Link
-                        href="/destinations"
-                        className="mt-6 inline-flex rounded-lg bg-gray-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-gray-800"
-                    >
-                        ← Back to Destinations
-                    </Link>
-                </div>
-            </main>
-        );
-    }
+    const relatedDestinations = await getRelatedDestinations(
+        destination._id,
+    );
 
     const location = destination.location || {};
     const categories = destination.categories || [];
@@ -110,8 +177,64 @@ export default async function DestinationDetailsPage({ params }) {
             ? destination.featuredImage
             : images[0] || null;
 
+    const baseUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    const canonicalUrl = `${baseUrl}/destinations/${
+        destination.slug || slug
+    }`;
+
+    /*
+     * Structured data
+     */
+    const structuredData = {
+        "@context": "https://schema.org",
+        "@type": "TouristDestination",
+        name: destination.title,
+        description:
+            destination.shortDescription ||
+            destination.description?.slice(0, 160) ||
+            "",
+
+        url: canonicalUrl,
+
+        ...(featuredImage?.url && {
+            image: featuredImage.url,
+        }),
+
+        ...(location.country && {
+            address: {
+                "@type": "PostalAddress",
+
+                ...(location.address && {
+                    streetAddress: location.address,
+                }),
+
+                ...(location.city && {
+                    addressLocality: location.city,
+                }),
+
+                ...(location.state && {
+                    addressRegion: location.state,
+                }),
+
+                ...(location.country && {
+                    addressCountry: location.country,
+                }),
+            },
+        }),
+    };
+
     return (
         <main className="min-h-screen bg-gray-50">
+            {/* Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(structuredData),
+                }}
+            />
+
             {/* Hero */}
             <section className="bg-gray-900 px-6 py-16 text-white">
                 <div className="mx-auto max-w-7xl">
@@ -126,7 +249,9 @@ export default async function DestinationDetailsPage({ params }) {
 
                     <p className="mb-3 text-sm font-semibold uppercase tracking-widest text-gray-400">
                         {location.city
-                            ? `${location.city}, ${location.state || location.country || ""}`
+                            ? `${location.city}, ${
+                                  location.state || location.country || ""
+                              }`
                             : "Explore Destination"}
                     </p>
 
@@ -217,7 +342,7 @@ export default async function DestinationDetailsPage({ params }) {
                                                         src={image.url}
                                                         alt={
                                                             image.alt ||
-                                                            destination.title
+                                                            `${destination.title} travel photo`
                                                         }
                                                         className="aspect-video h-full w-full object-cover transition duration-300 hover:scale-105"
                                                     />
@@ -247,6 +372,7 @@ export default async function DestinationDetailsPage({ params }) {
                                             <p className="font-semibold text-gray-900">
                                                 Country
                                             </p>
+
                                             <p className="mt-1">
                                                 {location.country}
                                             </p>
@@ -258,6 +384,7 @@ export default async function DestinationDetailsPage({ params }) {
                                             <p className="font-semibold text-gray-900">
                                                 State
                                             </p>
+
                                             <p className="mt-1">
                                                 {location.state}
                                             </p>
@@ -269,6 +396,7 @@ export default async function DestinationDetailsPage({ params }) {
                                             <p className="font-semibold text-gray-900">
                                                 City
                                             </p>
+
                                             <p className="mt-1">
                                                 {location.city}
                                             </p>
@@ -280,6 +408,7 @@ export default async function DestinationDetailsPage({ params }) {
                                             <p className="font-semibold text-gray-900">
                                                 Address
                                             </p>
+
                                             <p className="mt-1 leading-6">
                                                 {location.address}
                                             </p>
@@ -324,6 +453,7 @@ export default async function DestinationDetailsPage({ params }) {
                     </div>
                 </div>
 
+                {/* Related Destinations */}
                 {relatedDestinations.length > 0 && (
                     <section className="px-6 pb-16">
                         <div className="mx-auto max-w-7xl">
@@ -352,7 +482,8 @@ export default async function DestinationDetailsPage({ params }) {
                                         >
                                             <Link
                                                 href={`/destinations/${
-                                                    related.slug || related._id
+                                                    related.slug ||
+                                                    related._id
                                                 }`}
                                             >
                                                 {imageUrl ? (
@@ -420,8 +551,8 @@ export default async function DestinationDetailsPage({ params }) {
                         </div>
                     </section>
                 )}
-                
             </section>
         </main>
     );
 }
+

@@ -1,3 +1,5 @@
+
+
 import Link from "next/link";
 
 function getImageUrl(image) {
@@ -64,11 +66,106 @@ async function getRelatedBlogs(blogId) {
 
         const result = await response.json();
 
-        return result.success && Array.isArray(result.data) ? result.data : [];
+        return result.success && Array.isArray(result.data)
+            ? result.data
+            : [];
     } catch (error) {
         console.error("Failed to fetch related blogs:", error);
         return [];
     }
+}
+
+/*
+|--------------------------------------------------------------------------
+| Dynamic SEO Metadata
+|--------------------------------------------------------------------------
+*/
+
+export async function generateMetadata({ params }) {
+    const { slug } = await params;
+    const blog = await getBlog(slug);
+
+    const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    if (!blog) {
+        return {
+            title: "Blog Not Found | TravelBase",
+            description:
+                "The travel blog you are looking for does not exist or is no longer available.",
+            robots: {
+                index: false,
+                follow: false,
+            },
+        };
+    }
+
+    const title = blog.seo?.metaTitle || `${blog.title} | TravelBase`;
+
+    const description =
+        blog.seo?.metaDescription ||
+        blog.excerpt ||
+        (blog.content
+            ? blog.content.replace(/\s+/g, " ").slice(0, 160)
+            : "Read travel stories, guides and inspiration on TravelBase.");
+
+    const canonicalUrl = `${siteUrl}/blogs/${blog.slug || slug}`;
+
+    const imageUrl = getImageUrl(blog.featuredImage);
+
+    return {
+        title,
+        description,
+
+        alternates: {
+            canonical: canonicalUrl,
+        },
+
+        robots: {
+            index: true,
+            follow: true,
+        },
+
+        keywords: blog.seo?.keywords?.length
+            ? blog.seo.keywords
+            : undefined,
+
+        openGraph: {
+            title,
+            description,
+            url: canonicalUrl,
+            siteName: "TravelBase",
+            type: "article",
+            locale: "en_IN",
+
+            ...(blog.publishedAt && {
+                publishedTime: new Date(blog.publishedAt).toISOString(),
+            }),
+
+            ...(blog.author?.name && {
+                authors: [blog.author.name],
+            }),
+
+            ...(imageUrl && {
+                images: [
+                    {
+                        url: imageUrl,
+                        alt: blog.title,
+                    },
+                ],
+            }),
+        },
+
+        twitter: {
+            card: imageUrl ? "summary_large_image" : "summary",
+            title,
+            description,
+
+            ...(imageUrl && {
+                images: [imageUrl],
+            }),
+        },
+    };
 }
 
 export default async function BlogDetailsPage({ params }) {
@@ -104,8 +201,76 @@ export default async function BlogDetailsPage({ params }) {
 
     const imageUrl = getImageUrl(blog.featuredImage);
 
+    /*
+    |--------------------------------------------------------------------------
+    | BlogPosting Structured Data
+    |--------------------------------------------------------------------------
+    */
+
+    const siteUrl =
+        process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
+
+    const canonicalUrl = `${siteUrl}/blogs/${blog.slug || slug}`;
+
+    const structuredData = {
+        "@context": "https://schema.org",
+        "@type": "BlogPosting",
+
+        headline: blog.title,
+
+        ...(blog.excerpt && {
+            description: blog.excerpt,
+        }),
+
+        url: canonicalUrl,
+
+        ...(imageUrl && {
+            image: [imageUrl],
+        }),
+
+        ...(blog.publishedAt && {
+            datePublished: new Date(blog.publishedAt).toISOString(),
+        }),
+
+        ...(blog.updatedAt && {
+            dateModified: new Date(blog.updatedAt).toISOString(),
+        }),
+
+        ...(blog.author?.name && {
+            author: {
+                "@type": "Person",
+                name: blog.author.name,
+            },
+        }),
+
+        publisher: {
+            "@type": "Organization",
+            name: "TravelBase",
+            url: siteUrl,
+        },
+
+        ...(blog.category?.name && {
+            articleSection: blog.category.name,
+        }),
+
+        ...(blog.tags?.length > 0 && {
+            keywords: blog.tags
+                .map((tag) => tag.name)
+                .filter(Boolean)
+                .join(", "),
+        }),
+    };
+
     return (
         <main className="min-h-screen bg-gray-50">
+            {/* Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{
+                    __html: JSON.stringify(structuredData),
+                }}
+            />
+
             {/* Hero */}
             <section className="bg-gray-900 px-6 py-16 text-white">
                 <div className="mx-auto max-w-4xl">
@@ -151,7 +316,7 @@ export default async function BlogDetailsPage({ params }) {
                     {imageUrl ? (
                         <img
                             src={imageUrl}
-                            alt={blog.title}
+                            alt={`${blog.title} - TravelBase`}
                             className="mb-10 h-auto max-h-[550px] w-full rounded-xl object-cover shadow-sm"
                         />
                     ) : (
@@ -196,6 +361,7 @@ export default async function BlogDetailsPage({ params }) {
                         </Link>
                     </div>
 
+                    {/* Related Blogs */}
                     {relatedBlogs.length > 0 && (
                         <section className="mt-16">
                             <div className="mb-8">
@@ -211,7 +377,7 @@ export default async function BlogDetailsPage({ params }) {
 
                             <div className="grid gap-8 md:grid-cols-3">
                                 {relatedBlogs.map((related) => {
-                                    const imageUrl = getImageUrl(
+                                    const relatedImageUrl = getImageUrl(
                                         related.featuredImage,
                                     );
 
@@ -222,15 +388,17 @@ export default async function BlogDetailsPage({ params }) {
                                         >
                                             <Link
                                                 href={`/blogs/${
-                                                    related.slug || related._id
+                                                    related.slug ||
+                                                    related._id
                                                 }`}
                                             >
-                                                {imageUrl ? (
+                                                {relatedImageUrl ? (
                                                     <img
-                                                        src={imageUrl}
+                                                        src={relatedImageUrl}
                                                         alt={
-                                                            related.title ||
-                                                            "Travel Blog"
+                                                            related.title
+                                                                ? `${related.title} - TravelBase`
+                                                                : "Travel Blog"
                                                         }
                                                         className="h-56 w-full object-cover"
                                                     />
@@ -281,7 +449,6 @@ export default async function BlogDetailsPage({ params }) {
                             </div>
                         </section>
                     )}
-                    
                 </div>
             </section>
         </main>
