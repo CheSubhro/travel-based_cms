@@ -2,6 +2,18 @@
 
 import Link from "next/link";
 
+function getImageUrl(image) {
+    if (!image) {
+        return null;
+    }
+
+    if (typeof image === "string") {
+        return image;
+    }
+
+    return image.url || image.secure_url || null;
+}
+
 async function getCategories() {
     try {
         const baseUrl =
@@ -63,37 +75,59 @@ export default async function CategoriesPage() {
                         </div>
                     ) : (
                         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                            {categories.map((category) => (
-                                <Link
-                                    key={category._id}
-                                    href={`/categories/${category.slug}`}
-                                    className="group rounded-xl bg-white p-7 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
-                                >
-                                    <div className="flex items-start justify-between gap-4">
-                                        <div>
-                                            <h2 className="text-2xl font-bold text-gray-900 transition group-hover:text-gray-700">
-                                                {category.name}
-                                            </h2>
+                            {categories.map((category) => {
+                                const imageUrl = getImageUrl(category.image);
 
-                                            {category.description && (
-                                                <p className="mt-3 line-clamp-3 text-gray-600">
-                                                    {category.description}
-                                                </p>
-                                            )}
+                                return (
+                                    <Link
+                                        key={category._id}
+                                        href={`/categories/${category.slug}`}
+                                        className="group overflow-hidden rounded-xl bg-white shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+                                    >
+                                        {/* Category Image */}
+                                        {imageUrl ? (
+                                            <img
+                                                src={imageUrl}
+                                                alt={`${category.name} travel category`}
+                                                className="h-56 w-full object-cover transition duration-300 group-hover:scale-105"
+                                            />
+                                        ) : (
+                                            <div className="flex h-56 w-full items-center justify-center bg-gray-200 text-gray-500">
+                                                No image available
+                                            </div>
+                                        )}
+
+                                        {/* Category Content */}
+                                        <div className="p-7">
+                                            <div className="flex items-start justify-between gap-4">
+                                                <div>
+                                                    <h2 className="text-2xl font-bold text-gray-900 transition group-hover:text-gray-700">
+                                                        {category.name}
+                                                    </h2>
+
+                                                    {category.description && (
+                                                        <p className="mt-3 line-clamp-3 text-gray-600">
+                                                            {
+                                                                category.description
+                                                            }
+                                                        </p>
+                                                    )}
+                                                </div>
+
+                                                <span className="text-xl text-gray-400 transition group-hover:translate-x-1">
+                                                    →
+                                                </span>
+                                            </div>
+
+                                            <div className="mt-6 border-t pt-4">
+                                                <span className="text-sm font-semibold text-gray-700">
+                                                    Explore Category
+                                                </span>
+                                            </div>
                                         </div>
-
-                                        <span className="text-xl text-gray-400 transition group-hover:translate-x-1">
-                                            →
-                                        </span>
-                                    </div>
-
-                                    <div className="mt-6 border-t pt-4">
-                                        <span className="text-sm font-semibold text-gray-700">
-                                            Explore Category
-                                        </span>
-                                    </div>
-                                </Link>
-                            ))}
+                                    </Link>
+                                );
+                            })}
                         </div>
                     )}
                 </div>
