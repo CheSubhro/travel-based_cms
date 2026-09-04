@@ -6,6 +6,10 @@ import { getSession } from "@/lib/auth/session";
 import { requireRole } from "@/lib/auth/authorization";
 import { ROLES } from "@/constants/roles";
 
+import Media from "@/models/Media";
+import Category from "@/models/Category";
+import User from "@/models/User";
+
 export async function GET() {
     try {
         await connectDB();

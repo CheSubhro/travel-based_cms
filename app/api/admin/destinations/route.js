@@ -290,3 +290,5 @@ export async function POST(request) {
         return apiError("Failed to create destination", 500);
     }
 }
+
+
