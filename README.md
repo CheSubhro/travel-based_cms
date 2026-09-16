@@ -1,9 +1,19 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ![Saved Schemes](screenshot/screencapture-localhost-3000-2026-09-15-16_40_49.png)
-![Saved Schemes](screenshot/screencapture-localhost-3000-customers-create-2026-09-15-11_59_00.png)
-![Saved Schemes](screenshot/screencapture-localhost-3000-dashboard-2026-09-15-11_28_24.png)
-![Saved Schemes](screenshot/screencapture-localhost-3000-dashboard-2026-09-15-12_00_53.png)
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-blogs-2026-09-15-16_22_28.png)
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-categories-2026-09-15-16_29_40.png)
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-dashboard-2026-09-15-16_21_04.png)
+
+
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-destinations-6a9a455d2bc111ca6e1ffa82-edit-2026-09-15-16_28_57.png)
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-galleries-2026-09-15-16_34_05.png)
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-galleries-6a9a45b32bc111ca6e1ffa83-2026-09-15-16_34_53.png)
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-media-2026-09-15-16_31_28.png)
+
+
+![Saved Schemes](screenshot/screencapture-localhost-3000-blogs-best-time-to-visit-bankura-2026-09-15-16_46_08.png)
+![Saved Schemes](screenshot/screencapture-localhost-3000-admin-blogs-new-2026-09-15-16_22_47.png)
 
 
 ## Getting Started
